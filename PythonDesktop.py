@@ -3,23 +3,27 @@ from PIL import ImageTk
 from tkinter.constants import *
 import os
 import math
-window = tk.Tk()
-window.geometry("300x400")
+
+class App(tk.Tk):
+    def __init__(self):
+        super().__init__()
+
+        window.geometry("300x400")
+        self.title("Python Desktop")
+        self.login_frame = tk.Frame()
+        self.signup_frame = tk.Frame()
+        self.desktop_frame = tk.Frame()
+        self.desktop_frame.grid_propagate(0)
+        self.login_frame.grid_propagate(0)
+        self.signup_frame.grid_propagate(0)
 
 class Variables:
     wallpaper = ImageTk.PhotoImage(file = "download.png")
-    desktop_files = "C:\\Users\\616702\\OneDrive - Spokane Public Schools\\Desktop\\desktop"
+    desktop_files = "C:\\Users\\Musetex\\Desktop\\Desktop"
     desktop_list = os.listdir(desktop_files)
-    login_frame = tk.Frame()
-    signup_frame = tk.Frame()
-    desktop_frame = tk.Frame()
 
-#Variables.signup_frame.pack()
-#Variables.desktop_frame.pack(fill=BOTH, expand=True)
-Variables.desktop_frame.grid_propagate(0)
-Variables.login_frame.grid_propagate(0)
-Variables.signup_frame.grid_propagate(0)
-
+#App.signup_frame.pack()
+#App.desktop_frame.pack(fill=BOTH, expand=True)
 
 class Auth():
     username_input_value = True
@@ -38,18 +42,18 @@ class Login_screen():
 
     def initialize_obj(self):
         #places the login frame
-        Variables.login_frame.pack()
+        App.login_frame.pack()
 
         #clears any widgets
-        for widgets in Variables.signup_frame.winfo_children():
+        for widgets in App.signup_frame.winfo_children():
             widgets.destroy()
-        Variables.signup_frame.pack_forget()
+        App.signup_frame.pack_forget()
 
         #makes all the input fields and login button
-        self.username_input = tk.Entry(Variables.login_frame,bg="light gray")
-        self.password_input = tk.Entry(Variables.login_frame,bg="light gray")
-        self.login_button = tk.Button(Variables.login_frame, width=16, text="Login", command=self.login, bg="Green")
-        self.link = tk.Label(Variables.login_frame, text="Need an account? S\u0332I\u0332G\u0332N\u0332 \u0332U\u0332P\u0332",font=('Helveticabold', 8), cursor="hand2")
+        self.username_input = tk.Entry(App.login_frame,bg="light gray")
+        self.password_input = tk.Entry(App.login_frame,bg="light gray")
+        self.login_button = tk.Button(App.login_frame, width=16, text="Login", command=self.login, bg="Green")
+        self.link = tk.Label(App.login_frame, text="Need an account? S\u0332I\u0332G\u0332N\u0332 \u0332U\u0332P\u0332",font=('Helveticabold', 8), cursor="hand2")
 
         #places the widgets onto the screen
         self.username_input.pack()
@@ -144,18 +148,18 @@ class Login_screen():
 class Signup_screen():
     def __init__(self):
         #places the signup frame
-        Variables.signup_frame.pack()
+        App.signup_frame.pack()
 
         #clears any widgets
-        for widgets in Variables.login_frame.winfo_children():
+        for widgets in App.login_frame.winfo_children():
             widgets.destroy()
-        Variables.login_frame.pack_forget()
+        App.login_frame.pack_forget()
 
         #makes all the input fields and login button
-        self.username_input = tk.Entry(Variables.signup_frame,bg="light gray")
-        self.password_input = tk.Entry(Variables.signup_frame,bg="light gray")
-        self.signup_button = tk.Button(Variables.signup_frame, width=16, text="Sign Up", command=Signup_screen.signup, bg="Green")
-        self.link = tk.Label(Variables.signup_frame, text="Already a User? L\u0332O\u0332G\u0332I\u0332N\u0332",font=('Helveticabold', 8), cursor="hand2")
+        self.username_input = tk.Entry(App.signup_frame,bg="light gray")
+        self.password_input = tk.Entry(App.signup_frame,bg="light gray")
+        self.signup_button = tk.Button(App.signup_frame, width=16, text="Sign Up", command=Signup_screen.signup, bg="Green")
+        self.link = tk.Label(App.signup_frame, text="Already a User? L\u0332O\u0332G\u0332I\u0332N\u0332",font=('Helveticabold', 8), cursor="hand2")
 
         #places the widgets onto the screen
         self.username_input.pack()
@@ -401,6 +405,5 @@ class Signup_screen():
 #    place_icons()
     
 if __name__ == "__main__":
-    obj_login = Login_screen()
-    obj_login.stored_check()
+    window = App()
     window.mainloop()
