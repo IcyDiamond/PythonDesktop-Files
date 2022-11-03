@@ -8,7 +8,7 @@ window.geometry("300x400")
 
 class Variables:
     wallpaper = ImageTk.PhotoImage(file = "download.png")
-    desktop_files = "\\desktop"
+    desktop_files = "C:\\Users\\616702\\OneDrive - Spokane Public Schools\\Desktop\\desktop"
     desktop_list = os.listdir(desktop_files)
     login_frame = tk.Frame()
     signup_frame = tk.Frame()
@@ -34,6 +34,9 @@ class Auth():
 #login screen
 class Login_screen():
     def __init__(self):
+        self.initialize_obj()
+
+    def initialize_obj(self):
         #places the login frame
         Variables.login_frame.pack()
 
@@ -60,6 +63,7 @@ class Login_screen():
         self.username_input.bind("<FocusIn>", self.username_text)
         self.password_input.bind("<FocusOut>", self.password_out)
         self.username_input.bind("<FocusOut>", self.username_out)
+
 
     #Check all the info in the inputs
     def login(self):
@@ -213,7 +217,7 @@ class Signup_screen():
             Auth.password_stored_value = True
 
 
-        Login_screen.stored_check(self)
+        Login_screen.initialize_obj(self)
 
 
     #if the field is emtpy it puts the text "password"
