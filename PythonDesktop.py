@@ -1,5 +1,5 @@
 import tkinter as tk
-from PIL import ImageTk
+from PIL import ImageTk, Image
 from tkinter.constants import *
 import os
 import math
@@ -7,6 +7,7 @@ import math
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
+        window = tk.Tk()
 
         window.geometry("300x400")
         self.title("Python Desktop")
@@ -17,9 +18,33 @@ class App(tk.Tk):
         self.login_frame.grid_propagate(0)
         self.signup_frame.grid_propagate(0)
 
+        container = tk.Frame(self)
+        container.pack(side=TOP, fill=BOTH, expand=True)
+        container.grid_rowconfigure(0, weight=1)
+        container.grid_columnconfigure(0, weight=1)
+
+        #initalize frames
+        self.frams = {}
+        self.Login_screen = Login_screen
+        self.Signup_screen = Signup_screen
+
+        for F in {Login_screen, Signup_screen}:
+            frame = F(self, container)
+            self.frames[F] =frame
+            frame.grid(row=0, column=0, sticky="nsew")
+
+            self.show_frame(Login_screen)
+
+        def show_frame(self, cont):
+            frame = self.frame[cont]
+            menubar = frame.create_menubar(self)
+            self.configure(menu=menubar)
+            frame.tkraise()
+
+
 class Variables:
-    wallpaper = ImageTk.PhotoImage(file = "download.png")
-    desktop_files = "C:\\Users\\Musetex\\Desktop\\Desktop"
+    #wallpaper = ImageTk.PhotoImage(file ="C:\\Users\\616702\\OneDrive - Spokane Public Schools\\Desktop\\download.png")
+    desktop_files = "C:\\Users\\616702\\OneDrive - Spokane Public Schools\\Desktop\\desktop"
     desktop_list = os.listdir(desktop_files)
 
 #App.signup_frame.pack()
