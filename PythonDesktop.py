@@ -286,10 +286,12 @@ class Signup_screen():
 class Desktop_screen():
     def __init__(self, master):
         self.master = master
+        self.grid=True
+        
         self.max = 800
         self.size = 100
-        self.height = 4
-        self.width = 9 
+        self.height = 80
+        self.width = 80
 
     def initialize_obj(self):
         #clears any widgets
@@ -302,6 +304,7 @@ class Desktop_screen():
 
 
         #wallpaper
+        self.icon_photo = ImageTk.PhotoImage(Image.open(os.path.join(Variables.desktop_files, "image.png")))
         self.photo = ImageTk.PhotoImage(Image.open(os.path.join(Variables.desktop_files, "download.png")))
         self.desktop = tk.Canvas(self.master.desktop_frame, bg="black", highlightthickness=0)
         self.desktop.pack(side=LEFT,fill=BOTH, expand=True)
@@ -312,7 +315,7 @@ class Desktop_screen():
         taskbar.pack(side=BOTTOM,fill=X)
 
         #start button
-        self.start_button = tk.Button(taskbar,bg="grey", width=5,height=2,relief='solid',highlightthickness=0,command=self.show_start_menu)
+        self.start_button = tk.Button(taskbar,bg="grey", width=5,height=2,relief='solid',highlightthickness=0,bd=0,command=self.show_start_menu)
         self.start_button.pack(side=LEFT)
 
         #file explorer
@@ -335,16 +338,21 @@ class Desktop_screen():
         self.desktop_menu = tk.Menu(self.master.desktop_frame, tearoff=0)
         self.desktop_submenu = tk.Menu(self.master.desktop_frame, tearoff=0)
 
-
         #view sub menu
-        self.desktop_submenu.add_command(label="Large icons", command=lambda: self.icon_size(800,100,4,9))
-        self.desktop_submenu.add_command(label="Medium icons", command=lambda: self.icon_size(900,75,3,7))
-        self.desktop_submenu.add_command(label="Small icons", command=lambda: self.icon_size(900,50,2,5))
+        self.large_icons_var = tk.BooleanVar()
+        self.align_grid = tk.BooleanVar()
+        self.large_icons_var.set(True)
+        self.align_grid.set(True)
+        self.desktop_submenu.add_checkbutton(label="Large icons", command=lambda: self.icon_size(800,100,80,80))
+        self.desktop_submenu.add_checkbutton(label="Medium icons", command=lambda: self.icon_size(900,75,50,50))
+        self.desktop_submenu.add_checkbutton(label="Small icons", command=lambda: self.icon_size(900,50,35,35))
         self.desktop_submenu.add_separator()
         self.desktop_submenu.add_command(label="Auto Arrange icons")
-        self.desktop_submenu.add_command(label="Align icons to grid")
+        self.desktop_submenu.add_checkbutton(label="Align icons to grid", command=self.allin_grid)
         self.desktop_submenu.add_separator()
         self.desktop_submenu.add_command(label="Show desktop icons")
+        self.desktop_submenu.entryconfigure("Large icons",  variable=self.large_icons_var)
+        self.desktop_submenu.entryconfigure("Align icons to grid",  variable=self.align_grid)
 
 
         #main menu
@@ -376,12 +384,15 @@ class Desktop_screen():
 
         self.desktop.bind("<Button-3>", self.do_popup)
 
+
         #start button context menu
         self.start_menu = tk.Menu(self.master.desktop_frame, tearoff=0)
         self.start_menu.add_command(label="Option 1", command=lambda: print("Option 1 selected"))
         self.start_menu.add_command(label="Option 2", command=lambda: print("Option 2 selected"))
         self.start_menu.add_separator()
         self.start_menu.add_command(label="Exit", command=self.master.desktop_frame.quit)
+
+
 
     def show_start_menu(self):
         x, y = self.start_button.winfo_rootx(), self.start_button.winfo_rooty()
@@ -408,29 +419,6 @@ class Desktop_screen():
         finally:
             self.desktop_menu.grab_release()
 
-    #round to 150
-    def ceil_150(self, num):
-        ans = math.ceil(num/150)
-        return (ans * 100) + (ans * 50)
-
-    def floor_150(self, num):
-        ans = math.floor(num/150)
-        return (ans * 100) + (ans * 50)
-
-    def round_150(self,num):
-        c = self.ceil_150(num)
-        f = self.floor_150(num)
-
-        diff_c = c - num
-        diff_f = num - f
-
-        if diff_c <= diff_f:
-            return c
-
-        if diff_f < diff_c:
-            return f
-
-
     def icon_size(self, max, size, height, width):
         self.icon_max = max
         self.icon_numsize = size
@@ -448,31 +436,50 @@ class Desktop_screen():
         icon_x = 0
         for files in Variables.desktop_list:
         
-            file_icon = tk.Button(self.desktop, text=files, width=self.icon_width,height=self.icon_height)
+            file_icon = tk.Button(self.desktop, width=self.icon_width, height=self.icon_height,highlightthickness=0,state='disabled')
+            file_icon.config(image=self.icon_photo, compound="top")
+            file_icon.config(wraplength=65)
+            file_icon.config(text=files[:15] + "..." if len(files) > 15 else files)
             file_icon.place(x=icon_x,y=icon_y)
             if icon_y > self.icon_max:
                 icon_y = -1*self.icon_numsize
                 icon_x += self.icon_numsize
             icon_y += self.icon_numsize
+            
 
 
             file_icon.bind('<B1-Motion>',lambda e, b=file_icon: self.move_icon(e, b))
-            file_icon.bind('<ButtonRelease-1>',lambda e, b=file_icon: self.icon_place(e, b))
+            file_icon.bind('<ButtonRelease-1>',lambda e: self.icon_place(e))
+
+    def allin_grid(self):
+        if self.grid == True:
+            self.grid=False
+        else:
+            self.grid=True
+            for button in self.desktop.winfo_children():
+                if isinstance(button, tk.Button):
+                    button.place_configure(x=((button.winfo_x() + self.icon_numsize//2) // self.icon_numsize) * self.icon_numsize, 
+                                           y=((button.winfo_y() + self.icon_numsize//2) // self.icon_numsize) * self.icon_numsize)
+
+
 
     def move_icon(self, event, file_icon):
         file_icon.place(x=window.winfo_pointerx()-self.icon_numsize/3,y=window.winfo_pointery()-self.icon_numsize/3)
     
-    def icon_place(self, event, file_icon):
+    def icon_place(self, event):
         self.file_icon = event.widget
         self.x = event.x
         self.y = event.y
         grid_x = event.x_root - self.x
         grid_y = event.y_root - self.y
-        grid_x = (grid_x + self.icon_numsize//2)
-        grid_y = (grid_y + self.icon_numsize//2)
-        grid_x = (grid_x // self.icon_numsize) * self.icon_numsize
-        grid_y = (grid_y // self.icon_numsize) * self.icon_numsize
-        self.file_icon.place(x=grid_x, y=grid_y)
+        if self.grid == False:
+            self.file_icon.place(x=grid_x, y=grid_y)
+        else:
+            grid_x = (grid_x + self.icon_numsize//2)
+            grid_y = (grid_y + self.icon_numsize//2)
+            grid_x = (grid_x // self.icon_numsize) * self.icon_numsize
+            grid_y = (grid_y // self.icon_numsize) * self.icon_numsize
+            self.file_icon.place(x=grid_x, y=grid_y)
     
 if __name__ == "__main__":
     window = App()
