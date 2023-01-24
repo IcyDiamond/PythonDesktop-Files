@@ -276,6 +276,7 @@ class Desktop_screen():
     def __init__(self, master):
         self.master = master
         self.grid=True
+        self.view_icons_value = True
         
         self.max = 800
         self.size = 100
@@ -329,17 +330,17 @@ class Desktop_screen():
 
         #view sub menu
         self.large_icons_var = tk.BooleanVar()
-        self.align_grid = tk.BooleanVar()
+        self.align_grid_var = tk.BooleanVar()
         self.large_icons_var.set(True)
-        self.align_grid.set(True)
+        self.align_grid_var.set(True)
         self.desktop_submenu.add_checkbutton(label="Large icons", command=lambda: self.icon_size(800,100,80,80))
         self.desktop_submenu.add_checkbutton(label="Medium icons", command=lambda: self.icon_size(900,75,50,50))
         self.desktop_submenu.add_checkbutton(label="Small icons", command=lambda: self.icon_size(900,50,35,35))
         self.desktop_submenu.add_separator()
         self.desktop_submenu.add_command(label="Auto Arrange icons")
-        self.desktop_submenu.add_checkbutton(label="Align icons to grid", command=self.allin_grid)
+        self.desktop_submenu.add_checkbutton(label="Align icons to grid", command=self.align_grid)
         self.desktop_submenu.add_separator()
-        self.desktop_submenu.add_command(label="Show desktop icons")
+        self.desktop_submenu.add_checkbutton(label="Show desktop icons", command=self.veiw_icons)
         self.desktop_submenu.entryconfigure("Large icons",  variable=self.large_icons_var)
         self.desktop_submenu.entryconfigure("Align icons to grid",  variable=self.align_grid)
 
@@ -415,6 +416,16 @@ class Desktop_screen():
         self.icon_width = width
         self.place_icons()
 
+    def veiw_icons(self):
+        if self.view_icons_value != True:
+            self.view_icons_value=True
+            self.place_icons()
+        else:
+            self.view_icons_value=False
+            for button in self.desktop.winfo_children():
+                if isinstance(button, tk.Button):
+                    button.destroy()
+
     #places the icons
     def place_icons(self):
         for button in self.desktop.winfo_children():
@@ -440,7 +451,7 @@ class Desktop_screen():
             self.file_icon.bind('<B1-Motion>',lambda e, b=self.file_icon: self.move_icon(e, b))
             self.file_icon.bind('<ButtonRelease-1>',lambda e: self.icon_place(e))
 
-    def allin_grid(self):
+    def align_grid(self):
         if self.grid == True:
             self.grid=False
         else:
