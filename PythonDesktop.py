@@ -3,8 +3,9 @@ from PIL import Image, ImageTk
 from tkinter import messagebox
 import tkinter as tk
 import subprocess
-import math
+import json
 import os
+
 
 class App(tk.Tk):
     def __init__(self):
@@ -20,11 +21,21 @@ class App(tk.Tk):
         self.login_screen = Login_screen(self)
 
 class Variables:
-    desktop_files = os.path.dirname(os.path.abspath(__file__))
-    file_explorer = os.path.join(desktop_files, "FileExplorer.py")
-    desktop_list = os.listdir(desktop_files)
+    def __init__(self):
+        self.current_directory = os.path.dirname(os.path.abspath(__file__))
+        self.desktop_files = os.path.dirname(os.path.abspath(__file__))
+        self.users = os.path.join(self.desktop_files, "users")
+        self.file_explorer = os.path.join(self.desktop_files, "FileExplorer.py")
+        self.desktop_list = os.listdir(self.users)
+    
+    def refresh_var(self):
+        self.current_directory = os.path.dirname(os.path.abspath(__file__))
+        self.desktop_files = os.path.dirname(os.path.abspath(__file__))
+        self.users = os.path.join(self.desktop_files, "users")
+        self.file_explorer = os.path.join(self.desktop_files, "FileExplorer.py")
+        self.desktop_list = os.listdir(self.users)
 
-class Auth():
+class Auth:
     username = ""
     password = ""
     username_stored = ""
@@ -88,11 +99,20 @@ class Login_screen:
         if any(field.get().isspace() or field.get() in ["Username",""] for field in (self.username_input, self.password_input)):
             messagebox.showerror("Error", "Field above can not be blank!")
             return
-
-        if self.username_input.get() != Auth.username or self.password_input.get() != Auth.password:
+        
+        if not os.path.exists(f"{variables.users}\\{self.username_input.get()}"):
             messagebox.showerror("Error", "Username or Password is incorrect!")
             return
 
+        with open(f"{variables.users}\\{self.username_input.get()}\\credentials.json", "r") as file:
+            credentials = json.load(file)
+
+        if not self.password_input.get() == credentials["current_password"]:
+            messagebox.showerror("Error", "Username or Password is incorrect!")
+            return
+            
+        Auth.username = self.username_input.get()
+        Auth.password = self.password_input.get()
         messagebox.showinfo("Success","login successful!")
         self.username_input_value = True
         self.password_input_value = True
@@ -196,6 +216,9 @@ class Signup_screen():
         return all(c.isalnum() or c in '!@#$%^&*()_-+=[]{}\\|;:\'",.<>?/' for c in P)
 
     def signup(self):
+        Auth.username = self.username_input.get()
+        Auth.password = self.password_input.get()
+
         if self.username_input.get().isspace() or self.username_input.get() in ["Username",""] or self.password_input.get().isspace() or self.password_input.get() in ["Password",""]:
             messagebox.showerror("Error", "Field above can not be blank!")
             return
@@ -204,10 +227,21 @@ class Signup_screen():
             messagebox.showerror("Error", "Passwords dont match")
             return
 
-        Auth.username = self.username_input.get()
-        Auth.password = self.password_input.get()
+        if os.path.exists(f"{variables.users}\\{Auth.username}"):
+            messagebox.showerror("Error", "That user is already in use")
+            return
+
         Auth.username_stored = self.username_input.get()
         Auth.username_stored_value = True
+
+        data = {"current_password": self.password_input.get()}
+
+        os.mkdir(f"{variables.users}\\{Auth.username}")
+        with open(f"{variables.users}\\{Auth.username}\\credentials.json", "w") as file:
+            json.dump(data, file)
+
+        os.mkdir(f"{variables.users}\\{Auth.username}\\desktop")
+
         messagebox.showinfo("Success","signup successful!")
         self.master.login_screen = Login_screen(self.master)
 
@@ -294,8 +328,8 @@ class Desktop_screen():
 
 
         #wallpaper
-        self.icon_photo = ImageTk.PhotoImage(Image.open(os.path.join(Variables.desktop_files, "image.png")))
-        self.photo = ImageTk.PhotoImage(Image.open(os.path.join(Variables.desktop_files, "download.png")))
+        self.icon_photo = ImageTk.PhotoImage(Image.open(os.path.join(variables.desktop_files, "image.png")))
+        self.photo = ImageTk.PhotoImage(Image.open(os.path.join(variables.desktop_files, "download.png")))
         self.desktop = tk.Canvas(self.master.desktop_frame, bg="black", highlightthickness=0)
         self.desktop.pack(side=LEFT,fill=BOTH, expand=True)
         self.desktop.create_image(0, 0, image = self.photo, anchor = NW)
@@ -356,7 +390,7 @@ class Desktop_screen():
         self.desktop_menu.add_command(label="Paste")
         self.desktop_menu.add_command(label="Paste shortcut")
         self.desktop_menu.add_separator()
-        self.desktop_menu.add_command(label="New",command=self.do_popup)
+        self.desktop_menu.add_command(label="New", command=lambda: self.new_folder)
         self.desktop_menu.add_separator()
         self.desktop_menu.add_command(label="Display Settings")
         self.desktop_menu.add_command(label="Personalize")
@@ -385,7 +419,12 @@ class Desktop_screen():
         self.start_menu.add_separator()
         self.start_menu.add_command(label="Exit", command=self.master.desktop_frame.quit)
 
-
+    def new_folder(self):
+        x = self.desktop.winfo_pointerx()
+        y = self.desktop.winfo_pointery()
+        print(f'Mouse position: {x}, {y}')
+#        #os.makedirs("New Folder")
+#        self.icon_place()
 
     def show_start_menu(self):
         x, y = self.start_button.winfo_rootx(), self.start_button.winfo_rooty()
@@ -431,14 +470,15 @@ class Desktop_screen():
 
     #places the icons
     def place_icons(self):
+        variables.refresh_var()
         for button in self.desktop.winfo_children():
             if isinstance(button, tk.Button):
                 button.destroy()
 
         icon_y = 0
         icon_x = 0
-        for files in Variables.desktop_list:
-        
+        for files in os.listdir(f"{variables.users}\\{Auth.username}\\desktop"):
+
             self.file_icon = tk.Button(self.desktop, width=self.icon_width, height=self.icon_height,highlightthickness=0,state='disabled')
             self.file_icon.config(image=self.icon_photo, compound="top")
             self.file_icon.config(wraplength=65)
@@ -488,13 +528,15 @@ class Desktop_screen():
             grid_y = (grid_y + self.icon_numsize//2)
             grid_x = (grid_x // self.icon_numsize) * self.icon_numsize
             grid_y = (grid_y // self.icon_numsize) * self.icon_numsize
-            while any(button.winfo_x() == grid_x and button.winfo_y() == grid_y for button in self.desktop.winfo_children()):
+            while any(button != self.file_icon and button.winfo_x() == grid_x and button.winfo_y() == grid_y for button in self.desktop.winfo_children()):
                 grid_x += self.icon_numsize
                 grid_y += self.icon_numsize
             self.file_icon.place(x=grid_x, y=grid_y)
 
-    
+
 if __name__ == "__main__":
+    if not os.path.exists("Users"):
+        os.mkdir("Users")
     window = App()
     variables = Variables()
     signup_screen = Signup_screen(window)
