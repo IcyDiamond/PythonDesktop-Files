@@ -63,6 +63,7 @@ class Login_screen:
             self.link.pack()
 
             #Fills the input fields
+            Auth.password_input_value = True
             self.password_input.insert(0, "Password")
 
             #validates the charcters in the textbox
@@ -84,25 +85,19 @@ class Login_screen:
 
     #Check all the info in the inputs
     def login(self):
-        if self.username_input.get().isspace() or self.username_input.get() in ["Username",""]:
+        if any(field.get().isspace() or field.get() in ["Username",""] for field in (self.username_input, self.password_input)):
             messagebox.showerror("Error", "Field above can not be blank!")
-        else:
-            if self.password_input.get().isspace() or self.password_input.get() in ["Password",""]:
-                messagebox.showerror("Error", "Field above can not be blank!")
-            else:
+            return
 
-                #Change to check info in file
-                if self.username_input.get() == Auth.username:
-                    if self.password_input.get() == Auth.password:
-                        messagebox.showinfo("Success","login successful!")
-                        self.username_input_value = True
-                        self.password_input_value = True
-                        self.desktop = Desktop_screen(self.master)
-                        self.desktop.initialize_obj()
-                    else:
-                        messagebox.showerror("Error", "Username or Password is incorrect!")
-                else:
-                    messagebox.showerror("Error", "Username or Password is incorrect!")
+        if self.username_input.get() != Auth.username or self.password_input.get() != Auth.password:
+            messagebox.showerror("Error", "Username or Password is incorrect!")
+            return
+
+        messagebox.showinfo("Success","login successful!")
+        self.username_input_value = True
+        self.password_input_value = True
+        self.desktop = Desktop_screen(self.master)
+        self.desktop.initialize_obj()
     
     def stored_check(self):
         if Auth.username_stored_value == True:
@@ -201,26 +196,20 @@ class Signup_screen():
         return all(c.isalnum() or c in '!@#$%^&*()_-+=[]{}\\|;:\'",.<>?/' for c in P)
 
     def signup(self):
-        if self.username_input.get().isspace() or self.username_input.get() in ["Username",""]:
+        if self.username_input.get().isspace() or self.username_input.get() in ["Username",""] or self.password_input.get().isspace() or self.password_input.get() in ["Password",""]:
             messagebox.showerror("Error", "Field above can not be blank!")
-        else:
-            if self.password_input.get().isspace() or self.password_input.get() in ["Password",""]:
-                messagebox.showerror("Error", "Field above can not be blank!")
-            else:
-                if not self.confirm_password_input.get() == self.password_input.get():
-                    messagebox.showerror("Error", "Passwords dont match")
-                else:
+            return
+            
+        if not self.confirm_password_input.get() == self.password_input.get():
+            messagebox.showerror("Error", "Passwords dont match")
+            return
 
-
-                    Auth.username = self.username_input.get()
-                    Auth.password = self.password_input.get()
-                    Auth.username_stored = self.username_input.get()
-                    Auth.username_stored_value = True
-                    Auth.password_input_value = True
-                    messagebox.showinfo("Success","signup successful!")
-                    self.master.login_screen = Login_screen(self.master)
-                    self.master.login_screen.initialize_obj()
-    
+        Auth.username = self.username_input.get()
+        Auth.password = self.password_input.get()
+        Auth.username_stored = self.username_input.get()
+        Auth.username_stored_value = True
+        messagebox.showinfo("Success","signup successful!")
+        self.master.login_screen = Login_screen(self.master)
 
     def stored_check(self):
         if Auth.username_stored_value == True:
@@ -436,11 +425,11 @@ class Desktop_screen():
         icon_x = 0
         for files in Variables.desktop_list:
         
-            file_icon = tk.Button(self.desktop, width=self.icon_width, height=self.icon_height,highlightthickness=0,state='disabled')
-            file_icon.config(image=self.icon_photo, compound="top")
-            file_icon.config(wraplength=65)
-            file_icon.config(text=files[:15] + "..." if len(files) > 15 else files)
-            file_icon.place(x=icon_x,y=icon_y)
+            self.file_icon = tk.Button(self.desktop, width=self.icon_width, height=self.icon_height,highlightthickness=0,state='disabled')
+            self.file_icon.config(image=self.icon_photo, compound="top")
+            self.file_icon.config(wraplength=65)
+            self.file_icon.config(text=files[:15] + "..." if len(files) > 15 else files)
+            self.file_icon.place(x=icon_x,y=icon_y)
             if icon_y > self.icon_max:
                 icon_y = -1*self.icon_numsize
                 icon_x += self.icon_numsize
@@ -448,8 +437,8 @@ class Desktop_screen():
             
 
 
-            file_icon.bind('<B1-Motion>',lambda e, b=file_icon: self.move_icon(e, b))
-            file_icon.bind('<ButtonRelease-1>',lambda e: self.icon_place(e))
+            self.file_icon.bind('<B1-Motion>',lambda e, b=self.file_icon: self.move_icon(e, b))
+            self.file_icon.bind('<ButtonRelease-1>',lambda e: self.icon_place(e))
 
     def allin_grid(self):
         if self.grid == True:
@@ -458,10 +447,16 @@ class Desktop_screen():
             self.grid=True
             for button in self.desktop.winfo_children():
                 if isinstance(button, tk.Button):
-                    button.place_configure(x=((button.winfo_x() + self.icon_numsize//2) // self.icon_numsize) * self.icon_numsize, 
-                                           y=((button.winfo_y() + self.icon_numsize//2) // self.icon_numsize) * self.icon_numsize)
+                    x = ((button.winfo_x() + self.icon_numsize//2) // self.icon_numsize) * self.icon_numsize
+                    y = ((button.winfo_y() + self.icon_numsize//2) // self.icon_numsize) * self.icon_numsize
 
-
+                    # check if there is already a button at this position
+                    for existing_button in self.desktop.winfo_children():
+                        if isinstance(existing_button, tk.Button) and existing_button != button:
+                            if existing_button.winfo_x() == x and existing_button.winfo_y() == y:
+                                self.file_icon.place(x=existing_button.winfo_x()+self.icon_numsize, y=existing_button.winfo_y()+self.icon_numsize)
+                                return
+                    button.place_configure(x=x,y=y)
 
     def move_icon(self, event, file_icon):
         file_icon.place(x=window.winfo_pointerx()-self.icon_numsize/3,y=window.winfo_pointery()-self.icon_numsize/3)
@@ -479,7 +474,11 @@ class Desktop_screen():
             grid_y = (grid_y + self.icon_numsize//2)
             grid_x = (grid_x // self.icon_numsize) * self.icon_numsize
             grid_y = (grid_y // self.icon_numsize) * self.icon_numsize
+            while any(button.winfo_x() == grid_x and button.winfo_y() == grid_y for button in self.desktop.winfo_children()):
+                grid_x += self.icon_numsize
+                grid_y += self.icon_numsize
             self.file_icon.place(x=grid_x, y=grid_y)
+
     
 if __name__ == "__main__":
     window = App()
