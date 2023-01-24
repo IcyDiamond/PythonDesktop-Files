@@ -330,9 +330,11 @@ class Desktop_screen():
 
         #view sub menu
         self.large_icons_var = tk.BooleanVar()
+        self.view_icons_var = tk.BooleanVar()
         self.align_grid_var = tk.BooleanVar()
         self.large_icons_var.set(True)
         self.align_grid_var.set(True)
+        self.view_icons_var.set(True)
         self.desktop_submenu.add_checkbutton(label="Large icons", command=lambda: self.icon_size(800,100,80,80))
         self.desktop_submenu.add_checkbutton(label="Medium icons", command=lambda: self.icon_size(900,75,50,50))
         self.desktop_submenu.add_checkbutton(label="Small icons", command=lambda: self.icon_size(900,50,35,35))
@@ -342,7 +344,8 @@ class Desktop_screen():
         self.desktop_submenu.add_separator()
         self.desktop_submenu.add_checkbutton(label="Show desktop icons", command=self.veiw_icons)
         self.desktop_submenu.entryconfigure("Large icons",  variable=self.large_icons_var)
-        self.desktop_submenu.entryconfigure("Align icons to grid",  variable=self.align_grid)
+        self.desktop_submenu.entryconfigure("Align icons to grid",  variable=self.align_grid_var)
+        self.desktop_submenu.entryconfigure("Show desktop icons",  variable=self.view_icons_var)
 
 
         #main menu
