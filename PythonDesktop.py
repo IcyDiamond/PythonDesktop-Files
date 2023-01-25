@@ -33,7 +33,7 @@ class Variables:
         self.desktop_files = os.path.dirname(os.path.abspath(__file__))
         self.users = os.path.join(self.desktop_files, "users")
         self.file_explorer = os.path.join(self.desktop_files, "FileExplorer.py")
-        self.desktop_list = os.listdir(self.users)
+        self.desktop_list = f"{self.users}\\{Auth.username}\\desktop"
 
 class Auth:
     username = ""
@@ -311,6 +311,9 @@ class Desktop_screen():
         self.master = master
         self.grid=True
         self.view_icons_value = True
+        self.new_folder_copy = 0
+        self.menu_x = 0
+        self.menu_y = 0
         
         self.max = 800
         self.size = 100
@@ -390,7 +393,7 @@ class Desktop_screen():
         self.desktop_menu.add_command(label="Paste")
         self.desktop_menu.add_command(label="Paste shortcut")
         self.desktop_menu.add_separator()
-        self.desktop_menu.add_command(label="New", command=lambda: self.new_folder)
+        self.desktop_menu.add_command(label="New", command=self.new_folder)
         self.desktop_menu.add_separator()
         self.desktop_menu.add_command(label="Display Settings")
         self.desktop_menu.add_command(label="Personalize")
@@ -404,7 +407,7 @@ class Desktop_screen():
         self.desktop_menu.entryconfig("Paste", state="disabled")
         self.desktop_menu.entryconfig("Paste shortcut", state="disabled")
 
-        self.desktop_menu.entryconfig("New", state="disabled")
+        self.desktop_menu.entryconfig("New", state="normal")
 
         self.desktop_menu.entryconfig("Display Settings", state="disabled")
         self.desktop_menu.entryconfig("Personalize", state="disabled")
@@ -420,11 +423,33 @@ class Desktop_screen():
         self.start_menu.add_command(label="Exit", command=self.master.desktop_frame.quit)
 
     def new_folder(self):
-        x = self.desktop.winfo_pointerx()
-        y = self.desktop.winfo_pointery()
-        print(f'Mouse position: {x}, {y}')
-#        #os.makedirs("New Folder")
-#        self.icon_place()
+        
+        if self.new_folder_copy == 0:
+            new_folder_name = "New Folder"
+        else:
+            new_folder_name = f"New Folder ({self.new_folder_copy})"
+        if os.path.exists(f"{variables.users}\\{Auth.username}\\desktop\\{new_folder_name}"):
+            self.new_folder_copy += 1
+            self.new_folder()
+            return
+
+        os.makedirs(f"{variables.users}\\{Auth.username}\\desktop\\{new_folder_name}")
+        self.file_icon = tk.Button(self.desktop, width=self.icon_width, height=self.icon_height,highlightthickness=0,state='disabled')
+        self.file_icon.config(image=self.icon_photo, compound="top")
+        self.file_icon.config(wraplength=65)
+        self.file_icon.config(text=new_folder_name[:15] + "..." if len(new_folder_name) > 15 else new_folder_name)
+        self.menu_x = (self.menu_x + self.icon_numsize//2)
+        self.menu_y = (self.menu_y + self.icon_numsize//2)
+        self.menu_x = (self.menu_x // self.icon_numsize) * self.icon_numsize
+        self.menu_y = (self.menu_y // self.icon_numsize) * self.icon_numsize
+        while any(button != self.file_icon and button.winfo_x() == self.menu_x and button.winfo_y() == self.menu_y for button in self.desktop.winfo_children()):
+            self.menu_x += self.icon_numsize
+            self.menu_y += self.icon_numsize
+        self.file_icon.place(x=self.menu_x, y=self.menu_y)
+        
+
+        self.file_icon.bind('<B1-Motion>',lambda e, b=self.file_icon: self.move_icon(e, b))
+        self.file_icon.bind('<ButtonRelease-1>',lambda e: self.icon_place(e))
 
     def show_start_menu(self):
         x, y = self.start_button.winfo_rootx(), self.start_button.winfo_rooty()
@@ -446,6 +471,8 @@ class Desktop_screen():
 
     #sub menus
     def do_popup(self, event):
+        self.menu_x = event.x_root
+        self.menu_y = event.y_root
         try:
             self.desktop_menu.tk_popup(event.x_root, event.y_root)
         finally:
@@ -477,7 +504,7 @@ class Desktop_screen():
 
         icon_y = 0
         icon_x = 0
-        for files in os.listdir(f"{variables.users}\\{Auth.username}\\desktop"):
+        for files in os.listdir(variables.desktop_list):
 
             self.file_icon = tk.Button(self.desktop, width=self.icon_width, height=self.icon_height,highlightthickness=0,state='disabled')
             self.file_icon.config(image=self.icon_photo, compound="top")
@@ -489,8 +516,6 @@ class Desktop_screen():
                 icon_x += self.icon_numsize
             icon_y += self.icon_numsize
             
-
-
             self.file_icon.bind('<B1-Motion>',lambda e, b=self.file_icon: self.move_icon(e, b))
             self.file_icon.bind('<ButtonRelease-1>',lambda e: self.icon_place(e))
 
