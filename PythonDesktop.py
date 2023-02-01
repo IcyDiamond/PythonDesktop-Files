@@ -1,20 +1,22 @@
 from tkinter.constants import *
 from PIL import Image, ImageTk
 from tkinter import messagebox
+import customtkinter
 import tkinter as tk
 import subprocess
 import json
 import os
 
 
-class App(tk.Tk):
+class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
+        customtkinter.set_appearance_mode("Light")
         self.geometry("300x400")
         self.title("Python Desktop")
-        self.login_frame = tk.Frame(self)
-        self.signup_frame = tk.Frame(self)
-        self.desktop_frame = tk.Frame(self)
+        self.login_frame = customtkinter.CTkFrame(self)
+        self.signup_frame = customtkinter.CTkFrame(self)
+        self.desktop_frame = customtkinter.CTkFrame(self)
         self.login_frame.grid_propagate(0)
         self.signup_frame.grid_propagate(0)
         self.desktop_frame.grid_propagate(0)
@@ -62,10 +64,10 @@ class Login_screen:
             self.master.signup_frame.pack_forget()
 
             #makes all the input fields and login button
-            self.username_input = tk.Entry(self.master.login_frame,bg="light gray",validate="key")
-            self.password_input = tk.Entry(self.master.login_frame,bg="light gray",validate="key")
-            self.login_button = tk.Button(self.master.login_frame, width=16, text="Login", command=self.login, bg="Green")
-            self.link = tk.Label(self.master.login_frame, text="Need an account? S\u0332I\u0332G\u0332N\u0332 \u0332U\u0332P\u0332",font=('Helveticabold', 8), cursor="hand2")
+            self.username_input = customtkinter.CTkEntry(self.master.login_frame,validate="key")
+            self.password_input = customtkinter.CTkEntry(self.master.login_frame,validate="key")
+            self.login_button = customtkinter.CTkButton(self.master.login_frame, width=16, text="Login", command=self.login)
+            self.link = customtkinter.CTkLabel(self.master.login_frame, text="Need an account? S\u0332I\u0332G\u0332N\u0332 \u0332U\u0332P\u0332",font=('Helveticabold', 8), cursor="hand2")
 
             #places the widgets onto the screen
             self.username_input.pack()
@@ -144,7 +146,7 @@ class Login_screen:
     #if the field is emtpy it puts the text "password"
     def password_out(self,e):
         if self.password_input.index("end") == 0 or  self.username_input.get().isspace():
-            self.password_input.config(show="")
+            self.password_input.configure(show="")
             self.password_input.insert(0, "Password")
             Auth.password_input_value = True
 
@@ -157,7 +159,7 @@ class Login_screen:
     #Clears text when password field is clicked
     def password_text(self,e):
         if Auth.password_input_value == True:
-            self.password_input.config(show="*")
+            self.password_input.configure(show="*")
             self.password_input.delete(0, "end")
             Auth.password_input_value = False
 
@@ -180,11 +182,11 @@ class Signup_screen():
         self.master.login_frame.pack_forget()
         
         #makes all the input fields and login button
-        self.username_input = tk.Entry(self.master.signup_frame,bg="light gray",validate="key")
-        self.password_input = tk.Entry(self.master.signup_frame,bg="light gray",validate="key")
-        self.confirm_password_input = tk.Entry(self.master.signup_frame, bg="light gray",validate="key")
-        self.signup_button = tk.Button(self.master.signup_frame, width=16, text="SignUp", command=self.signup, bg="Green")
-        self.link = tk.Label(self.master.signup_frame, text="Already a User? L\u0332O\u0332G\u0332I\u0332N\u0332",font=('Helveticabold', 8), cursor="hand2")
+        self.username_input = customtkinter.CTkEntry(self.master.signup_frame,validate="key")
+        self.password_input = customtkinter.CTkEntry(self.master.signup_frame,validate="key")
+        self.confirm_password_input = customtkinter.CTkEntry(self.master.signup_frame,validate="key")
+        self.signup_button = customtkinter.CTkButton(self.master.signup_frame, width=16, text="SignUp", command=self.signup)
+        self.link = customtkinter.CTkLabel(self.master.signup_frame, text="Already a User? L\u0332O\u0332G\u0332I\u0332N\u0332",font=('Helveticabold', 8), cursor="hand2")
 
         #places the widgets onto the screen
         self.username_input.pack()
@@ -275,14 +277,14 @@ class Signup_screen():
     #if the field is emtpy it puts the text "password"
     def password_out(self,e):
         if self.password_input.index("end") == 0 or  self.password_input.get().isspace():
-            self.password_input.config(show="")
+            self.password_input.configure(show="")
             self.password_input.insert(0, "Password")
             Auth.password_input_value = True
 
     def confirm_password_out(self,e):
         if self.confirm_password_input.index("end") == 0 or  self.confirm_password_input.get().isspace():
             self.confirm_password_input.configure(validatecommand=())
-            self.confirm_password_input.config(show="")
+            self.confirm_password_input.configure(show="")
             self.confirm_password_input.insert(0, "Confirm Password")
             self.confirm_password_input.configure(validatecommand=(self.master.register(self.validate), '%P'))
             Auth.confirm_password_input_value = True
@@ -296,13 +298,13 @@ class Signup_screen():
     #Clears text when password field is clicked
     def password_text(self,e):
         if Auth.password_input_value == True:
-            self.password_input.config(show="*")
+            self.password_input.configure(show="*")
             self.password_input.delete(0, "end")
             Auth.password_input_value = False
 
     def confirm_password_text(self,e):
         if Auth.confirm_password_input_value == True:
-            self.confirm_password_input.config(show="*")
+            self.confirm_password_input.configure(show="*")
             self.confirm_password_input.delete(0, "end")
             Auth.confirm_password_input_value = False
 
@@ -435,9 +437,9 @@ class Desktop_screen():
 
         os.makedirs(f"{variables.users}\\{Auth.username}\\desktop\\{new_folder_name}")
         self.file_icon = tk.Button(self.desktop, width=self.icon_width, height=self.icon_height,highlightthickness=0,state='disabled')
-        self.file_icon.config(image=self.icon_photo, compound="top")
-        self.file_icon.config(wraplength=65)
-        self.file_icon.config(text=new_folder_name[:15] + "..." if len(new_folder_name) > 15 else new_folder_name)
+        self.file_icon.configure(image=self.icon_photo, compound="top")
+        self.file_icon.configure(wraplength=65)
+        self.file_icon.configure(text=new_folder_name[:15] + "..." if len(new_folder_name) > 15 else new_folder_name)
         self.menu_x = (self.menu_x + self.icon_numsize//2)
         self.menu_y = (self.menu_y + self.icon_numsize//2)
         self.menu_x = (self.menu_x // self.icon_numsize) * self.icon_numsize
@@ -507,9 +509,9 @@ class Desktop_screen():
         for files in os.listdir(variables.desktop_list):
 
             self.file_icon = tk.Button(self.desktop, width=self.icon_width, height=self.icon_height,highlightthickness=0,state='disabled')
-            self.file_icon.config(image=self.icon_photo, compound="top")
-            self.file_icon.config(wraplength=65)
-            self.file_icon.config(text=files[:15] + "..." if len(files) > 15 else files)
+            self.file_icon.configure(image=self.icon_photo, compound="top")
+            self.file_icon.configure(wraplength=65)
+            self.file_icon.configure(text=files[:15] + "..." if len(files) > 15 else files)
             self.file_icon.place(x=icon_x,y=icon_y)
             if icon_y > self.icon_max:
                 icon_y = -1*self.icon_numsize
