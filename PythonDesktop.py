@@ -1,5 +1,6 @@
 from tkinter.constants import *
 from PIL import Image, ImageTk
+from tkinter import PhotoImage
 from tkinter import messagebox
 import tkinter as tk
 import subprocess
@@ -26,6 +27,7 @@ class Variables:
         self.desktop_files = os.path.dirname(os.path.abspath(__file__))
         self.users = os.path.join(self.desktop_files, "users")
         self.file_explorer = os.path.join(self.desktop_files, "FileExplorer.py")
+        self.file_temp_icon = os.path.join(self.current_directory, "image.png")
         self.desktop_list = os.listdir(self.users)
     
     def refresh_var(self):
@@ -33,6 +35,7 @@ class Variables:
         self.desktop_files = os.path.dirname(os.path.abspath(__file__))
         self.users = os.path.join(self.desktop_files, "users")
         self.file_explorer = os.path.join(self.desktop_files, "FileExplorer.py")
+        self.file_temp_icon = os.path.join(self.desktop_files, "image.png")
         self.desktop_list = f"{self.users}\\{Auth.username}\\desktop"
 
 class Auth:
@@ -314,6 +317,11 @@ class Desktop_screen():
         self.new_folder_copy = 0
         self.menu_x = 0
         self.menu_y = 0
+        self.image = "e"
+        self.x = None
+        self.y = None
+        self.img_ref = []
+        self.text_ref = []
         
         self.max = 800
         self.size = 100
@@ -346,7 +354,7 @@ class Desktop_screen():
         self.start_button.pack(side=LEFT)
 
         #file explorer
-        self.file_explorer = tk.Button(taskbar,bg="grey", width=5,height=2,relief='solid',highlightthickness=0,command= lambda: subprocess.call(["python", Variables.file_explorer]))
+        self.file_explorer = tk.Button(taskbar,bg="grey", width=5,height=2,relief='solid',highlightthickness=0,command= lambda: subprocess.call(["python", variables.file_explorer]))
         self.file_explorer.pack(side=LEFT)
 
 
@@ -357,7 +365,6 @@ class Desktop_screen():
         
         #icons
         self.icon_size(self.max, self.size, self.height, self.width)
-        self.place_icons()
         
         #----------------------------------------Work in progress (context menu)--------------------------------------------------------------------
 
@@ -400,14 +407,14 @@ class Desktop_screen():
 
 
         #disabled menu options
-        self.desktop_menu.entryconfig("View", state="normal")
+        self.desktop_menu.entryconfig("View", state="disabled")
         self.desktop_menu.entryconfig("Sort by", state="disabled")
         self.desktop_menu.entryconfig("Refresh", state="normal")
 
         self.desktop_menu.entryconfig("Paste", state="disabled")
         self.desktop_menu.entryconfig("Paste shortcut", state="disabled")
 
-        self.desktop_menu.entryconfig("New", state="normal")
+        self.desktop_menu.entryconfig("New", state="disabled")
 
         self.desktop_menu.entryconfig("Display Settings", state="disabled")
         self.desktop_menu.entryconfig("Personalize", state="disabled")
@@ -496,28 +503,77 @@ class Desktop_screen():
                     button.destroy()
 
     #places the icons
+
+    def print_all_methods(self, var):
+        for m in dir(var):
+            if not m.startswith("_"):
+                res = getattr(var, m)
+                if str(res).startswith("<bound"):
+                    try:
+                        res = getattr(var, m)()
+                    except Exception as e:
+                        res = f"ERROR: {e}"
+                print(f"{m}: {res}")
+
     def place_icons(self):
         variables.refresh_var()
-        for button in self.desktop.winfo_children():
-            if isinstance(button, tk.Button):
-                button.destroy()
+        
+        for image in self.img_ref:
+            self.desktop.delete(image)
+        for text in self.text_ref:
+            self.desktop.delete(text)
 
-        icon_y = 0
-        icon_x = 0
+        icon_y = 50
+        icon_x = 50
+        self.img_ref = []
+        self.text_ref = []
         for files in os.listdir(variables.desktop_list):
+            
+            self.simage = PhotoImage(file="C:\\Users\\Musetex\\Desktop\\Desktop\\image.png")
+            self.image = self.desktop.create_image(icon_x, icon_y, image=self.simage)
+            self.img_ref.append(self.simage)
+            text = self.desktop.create_text(icon_x,
+                                         icon_y + 30,
+                                         text=files[:15] + "..." if len(files) > 15 else files,
+                                         anchor="n", font=("Arial", 11))
+            self.text_ref.append(text)
+            
+            self.desktop.tag_bind(self.image, "<Button-1>", lambda event, img=self.image, txt=text: self.on_image_press(event, img, txt))
+            self.desktop.tag_bind(self.image, "<B1-Motion>", lambda event, img=self.image, txt=text: self.on_image_move(event, img, txt))
+            self.desktop.tag_bind(self.image, "<ButtonRelease-1>", lambda event, img=self.image, txt=text: self.on_image_release(event, img, txt))
 
-            self.file_icon = tk.Button(self.desktop, width=self.icon_width, height=self.icon_height,highlightthickness=0,state='disabled')
-            self.file_icon.config(image=self.icon_photo, compound="top")
-            self.file_icon.config(wraplength=65)
-            self.file_icon.config(text=files[:15] + "..." if len(files) > 15 else files)
-            self.file_icon.place(x=icon_x,y=icon_y)
             if icon_y > self.icon_max:
-                icon_y = -1*self.icon_numsize
+                icon_y = 0
                 icon_x += self.icon_numsize
             icon_y += self.icon_numsize
-            
-            self.file_icon.bind('<B1-Motion>',lambda e, b=self.file_icon: self.move_icon(e, b))
-            self.file_icon.bind('<ButtonRelease-1>',lambda e: self.icon_place(e))
+
+    def on_image_press(self, event, img, txt):
+        self.selected_img = img
+        self.desktop.configure(cursor="fleur")
+        self.desktop.x = event.x
+        self.desktop.y = event.y
+        self.desktop.coords(img, self.x, self.y)
+        self.desktop.coords(txt, self.x, self.y)
+
+    # function to handle the move event
+    def on_image_move(self, event, img, txt):
+        if self.selected_img == img:
+            x, y = (event.x - self.desktop.x), (event.y - self.desktop.y)
+            self.desktop.move(self.selected_img, x, y)
+            self.desktop.move(txt, x, y)
+            self.desktop.x = event.x
+            self.desktop.y = event.y
+
+    # function to handle the release event
+    def on_image_release(self, event, img, txt):
+        self.desktop.configure(cursor="")
+        x = int(event.x/100)*100
+        y = int(event.y/100)*100
+        if self.grid == False:
+            return
+        self.desktop.coords(img, x+50, y+50)
+        self.desktop.coords(txt, x+50, y+80 )
+        
 
     def align_grid(self):
         if self.grid == True:
@@ -525,8 +581,8 @@ class Desktop_screen():
         else:
             self.grid=True
             for button in self.desktop.winfo_children():
-                if isinstance(button, tk.Button):
-                    x = ((button.winfo_x() + self.icon_numsize//2) // self.icon_numsize) * self.icon_numsize
+                if isinstance(button, tk.Canvas):
+                    x = ((button.winfo_x()/100)*100)
                     y = ((button.winfo_y() + self.icon_numsize//2) // self.icon_numsize) * self.icon_numsize
 
                     # check if there is already a button at this position
@@ -536,9 +592,6 @@ class Desktop_screen():
                                 self.file_icon.place(x=existing_button.winfo_x()+self.icon_numsize, y=existing_button.winfo_y()+self.icon_numsize)
                                 return
                     button.place_configure(x=x,y=y)
-
-    def move_icon(self, event, file_icon):
-        file_icon.place(x=window.winfo_pointerx()-self.icon_numsize/3,y=window.winfo_pointery()-self.icon_numsize/3)
     
     def icon_place(self, event):
         self.file_icon = event.widget
@@ -557,6 +610,7 @@ class Desktop_screen():
                 grid_x += self.icon_numsize
                 grid_y += self.icon_numsize
             self.file_icon.place(x=grid_x, y=grid_y)
+        
 
 
 if __name__ == "__main__":
