@@ -1,25 +1,31 @@
+from screeninfo import get_monitors
 from tkinter.constants import *
 from PIL import Image, ImageTk
 from tkinter import PhotoImage
 from tkinter import messagebox
 import tkinter as tk
 import subprocess
+import atexit
 import json
+import sys
 import os
 
+def exit_handler():
+    os.system('explorer.exe &')
+    sys.exit
 
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.geometry("300x400")
         self.title("Python Desktop")
-        self.login_frame = tk.Frame(self)
+        self.signin_frame = tk.Frame(self)
         self.signup_frame = tk.Frame(self)
         self.desktop_frame = tk.Frame(self)
-        self.login_frame.grid_propagate(0)
+        self.signin_frame.grid_propagate(0)
         self.signup_frame.grid_propagate(0)
         self.desktop_frame.grid_propagate(0)
-        self.login_screen = Login_screen(self)
+        self.signin_screen = signin_screen(self)
 
 class Variables:
     def __init__(self):
@@ -28,7 +34,9 @@ class Variables:
         self.users = os.path.join(self.desktop_files, "users")
         self.file_explorer = os.path.join(self.desktop_files, "FileExplorer.py")
         self.file_temp_icon = os.path.join(self.current_directory, "image.png")
-        self.desktop_list = os.listdir(self.users)
+        self.desktop_list = f"{self.users}\\{Auth.username}\\desktop"
+        self.icon_images = os.path.join(f"{self.desktop_files}\\Windows\\system32")
+
     
     def refresh_var(self):
         self.current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -37,6 +45,7 @@ class Variables:
         self.file_explorer = os.path.join(self.desktop_files, "FileExplorer.py")
         self.file_temp_icon = os.path.join(self.desktop_files, "image.png")
         self.desktop_list = f"{self.users}\\{Auth.username}\\desktop"
+        self.icon_images = os.path.join(f"{self.desktop_files}\\Windows\\system32")
 
 class Auth:
     username = ""
@@ -47,8 +56,8 @@ class Auth:
     username_stored_value = False
     confirm_password_input_value = True
 
-#login screen
-class Login_screen:
+#signin screen
+class signin_screen:
     def __init__(self, master):
         self.master = master
         self.initialized = False
@@ -56,24 +65,24 @@ class Login_screen:
 
     def initialize_obj(self):
         if not self.initialized:
-            #places the login frame
-            self.master.login_frame.pack()
+            #places the signin frame
+            self.master.signin_frame.pack()
 
             #clears any widgets
             for widgets in self.master.signup_frame.winfo_children():
                 widgets.destroy()
             self.master.signup_frame.pack_forget()
 
-            #makes all the input fields and login button
-            self.username_input = tk.Entry(self.master.login_frame,bg="light gray",validate="key")
-            self.password_input = tk.Entry(self.master.login_frame,bg="light gray",validate="key")
-            self.login_button = tk.Button(self.master.login_frame, width=16, text="Login", command=self.login, bg="Green")
-            self.link = tk.Label(self.master.login_frame, text="Need an account? S\u0332I\u0332G\u0332N\u0332 \u0332U\u0332P\u0332",font=('Helveticabold', 8), cursor="hand2")
+            #makes all the input fields and signin button
+            self.username_input = tk.Entry(self.master.signin_frame,bg="light gray",validate="key")
+            self.password_input = tk.Entry(self.master.signin_frame,bg="light gray",validate="key")
+            self.signin_button = tk.Button(self.master.signin_frame, width=16, text="SignIn", command=self.signin, bg="Green")
+            self.link = tk.Label(self.master.signin_frame, text="Need an account? S\u0332I\u0332G\u0332N\u0332 \u0332U\u0332P\u0332",font=('Helveticabold', 8), cursor="hand2")
 
             #places the widgets onto the screen
             self.username_input.pack()
             self.password_input.pack()
-            self.login_button.pack()
+            self.signin_button.pack()
             self.link.pack()
 
             #Fills the input fields
@@ -90,6 +99,8 @@ class Login_screen:
             self.username_input.bind("<FocusIn>", self.username_text)
             self.password_input.bind("<FocusOut>", self.password_out)
             self.username_input.bind("<FocusOut>", self.username_out)
+            self.username_input.bind("<Return>", self.signin)
+            self.password_input.bind("<Return>", self.signin)
             self.stored_check()
             self.initialized = True
 
@@ -98,7 +109,7 @@ class Login_screen:
         return all(c.isalnum() or c in '!@#$%^&*()_-+=[]{}\\|;:\'",.<>?/' for c in P)
 
     #Check all the info in the inputs
-    def login(self):
+    def signin(self, event=NONE):
         if any(field.get().isspace() or field.get() in ["Username",""] for field in (self.username_input, self.password_input)):
             messagebox.showerror("Error", "Field above can not be blank!")
             return
@@ -116,7 +127,7 @@ class Login_screen:
             
         Auth.username = self.username_input.get()
         Auth.password = self.password_input.get()
-        messagebox.showinfo("Success","login successful!")
+        messagebox.showinfo("Success","signin successful!")
         self.username_input_value = True
         self.password_input_value = True
         self.desktop = Desktop_screen(self.master)
@@ -130,7 +141,7 @@ class Login_screen:
             self.username_input.insert(0, "Username")
         
     def hyperlink(self):
-        self.master.login_frame.pack_forget()
+        self.master.signin_frame.pack_forget()
         
         if self.username_input.get().isspace() or self.username_input.get() in ["Username",""]:
             Auth.username_input_value = True
@@ -178,16 +189,16 @@ class Signup_screen():
         self.master.signup_frame.pack()
         
         #clears any widgets
-        for widgets in self.master.login_frame.winfo_children():
+        for widgets in self.master.signin_frame.winfo_children():
             widgets.destroy()
-        self.master.login_frame.pack_forget()
+        self.master.signin_frame.pack_forget()
         
-        #makes all the input fields and login button
+        #makes all the input fields and signin button
         self.username_input = tk.Entry(self.master.signup_frame,bg="light gray",validate="key")
         self.password_input = tk.Entry(self.master.signup_frame,bg="light gray",validate="key")
         self.confirm_password_input = tk.Entry(self.master.signup_frame, bg="light gray",validate="key")
         self.signup_button = tk.Button(self.master.signup_frame, width=16, text="SignUp", command=self.signup, bg="Green")
-        self.link = tk.Label(self.master.signup_frame, text="Already a User? L\u0332O\u0332G\u0332I\u0332N\u0332",font=('Helveticabold', 8), cursor="hand2")
+        self.link = tk.Label(self.master.signup_frame, text="Already a User? S\u0332I\u0332G\u0332N\u0332 \u0332I\u0332N\u0332",font=('Helveticabold', 8), cursor="hand2")
 
         #places the widgets onto the screen
         self.username_input.pack()
@@ -212,13 +223,16 @@ class Signup_screen():
         self.username_input.bind("<FocusOut>", self.username_out)
         self.confirm_password_input.bind("<FocusIn>", self.confirm_password_text)
         self.confirm_password_input.bind("<FocusOut>", self.confirm_password_out)
+        self.username_input.bind("<Return>", self.signup)
+        self.password_input.bind("<Return>", self.signup)
+        self.confirm_password_input.bind("<Return>", self.signup)
         self.stored_check()
 
     def validate(self, P):
         #only allow A-Z, a-z, 0-9, and common symbols
         return all(c.isalnum() or c in '!@#$%^&*()_-+=[]{}\\|;:\'",.<>?/' for c in P)
 
-    def signup(self):
+    def signup(self, event=None):
         Auth.username = self.username_input.get()
         Auth.password = self.password_input.get()
 
@@ -246,7 +260,7 @@ class Signup_screen():
         os.mkdir(f"{variables.users}\\{Auth.username}\\desktop")
 
         messagebox.showinfo("Success","signup successful!")
-        self.master.login_screen = Login_screen(self.master)
+        self.master.signin_screen = signin_screen(self.master)
 
     def stored_check(self):
         if Auth.username_stored_value == True:
@@ -266,8 +280,8 @@ class Signup_screen():
         Auth.password_input_value = True
         Auth.confirm_password_input_value = True
 
-        self.master.login_screen = Login_screen(self.master)
-        self.master.login_screen.initialize_obj()
+        self.master.signin_screen = signin_screen(self.master)
+        self.master.signin_screen.initialize_obj()
 
     #if the username is emtpy or just spaces
     def username_out(self,e):
@@ -312,64 +326,84 @@ class Signup_screen():
 class Desktop_screen():
     def __init__(self, master):
         self.master = master
-        self.grid=True
+        self.img_ref = []
+        self.text_ref = []
         self.view_icons_value = True
+        self.grid=True
         self.new_folder_copy = 0
         self.menu_x = 0
         self.menu_y = 0
-        self.image = "e"
+        self.show_start_menu = True
+        self.side_bar_initialized = False
+        self.side_bar_active = False
+        self.start_menu = None
+        self.image = None
         self.x = None
         self.y = None
-        self.img_ref = []
-        self.text_ref = []
         
-        self.max = 800
+        self.max = 900
         self.size = 100
-        self.height = 80
-        self.width = 80
+        self.height = 50
+        self.add = 0
 
     def initialize_obj(self):
         #clears any widgets
-        for widgets in self.master.login_frame.winfo_children():
+        for widgets in self.master.signin_frame.winfo_children():
             widgets.destroy()
         window.attributes('-fullscreen',True)
-        self.master.login_frame.pack_forget()
+        self.master.signin_frame.pack_forget()
         self.master.signup_frame.pack_forget()
         self.master.desktop_frame.pack(fill=BOTH, expand=True)
 
-
         #wallpaper
-        self.icon_photo = ImageTk.PhotoImage(Image.open(os.path.join(variables.desktop_files, "image.png")))
-        self.photo = ImageTk.PhotoImage(Image.open(os.path.join(variables.desktop_files, "download.png")))
+        self.start_icon = PhotoImage(file=os.path.join(variables.icon_images, "StartButton.png"))
+        self.menu = PhotoImage(file=os.path.join(variables.icon_images, "Menu.png"))
+        self.document = PhotoImage(file=os.path.join(variables.icon_images, "Document.png"))
+        self.account = PhotoImage(file=os.path.join(variables.icon_images, "DefaultProfileImage.png"))
+        self.photos = PhotoImage(file=os.path.join(variables.icon_images, "Images.png"))
+        self.settings = PhotoImage(file=os.path.join(variables.icon_images, "Options.png"))
+        self.power = PhotoImage(file=os.path.join(variables.icon_images, "Power.png"))
+        self.icon_photo = PhotoImage(file=os.path.join(variables.icon_images, "UnknownIcon_Medium.png"))
+        self.wallpaper = ImageTk.PhotoImage(Image.open(os.path.join(f"{variables.current_directory}\\Windows\\Web\\Wallpaper\\Wallpaper.jpg")))
+        self.folders = ImageTk.PhotoImage(Image.open(os.path.join(variables.icon_images, "Folder_medium.png")))
         self.desktop = tk.Canvas(self.master.desktop_frame, bg="black", highlightthickness=0)
         self.desktop.pack(side=LEFT,fill=BOTH, expand=True)
-        self.desktop.create_image(0, 0, image = self.photo, anchor = NW)
+        self.desktop.create_image(0, 0, image = self.wallpaper, anchor = NW)
+
+        #Start menu
+        self.start_menu = tk.Frame(self.desktop, background='#282828', width=640, height=655)
+        self.start_menu.place()
+        self.start_menu_windows()
 
         #taskbar
-        taskbar = tk.Canvas(self.desktop,height=100,bg="black", highlightthickness=0)
+        taskbar = tk.Canvas(self.desktop, background='#1d1d1d',height=40, highlightthickness=0)
         taskbar.pack(side=BOTTOM,fill=X)
+        start_button = taskbar.create_image(0, 0, anchor=NW, image=self.start_icon)
+        file_explorer = taskbar.create_image(0+49,0,anchor=NW,image=self.start_icon)
+        taskbar.create_image(0+49+49,0,anchor=NW,image=self.start_icon)
+        taskbar.tag_bind(start_button, "<Button-1>", self.start_button_menu_call)
+        taskbar.tag_bind(file_explorer, "<Button-1>", self.file_explorer_fcn)
+        window.bind("<Win_L>", self.start_button_menu_call)
 
-        #start button
-        self.start_button = tk.Button(taskbar,bg="grey", width=5,height=2,relief='solid',highlightthickness=0,bd=0,command=self.show_start_menu)
-        self.start_button.pack(side=LEFT)
-
-        #file explorer
-        self.file_explorer = tk.Button(taskbar,bg="grey", width=5,height=2,relief='solid',highlightthickness=0,command= lambda: subprocess.call(["python", variables.file_explorer]))
-        self.file_explorer.pack(side=LEFT)
-
-
-        self.file_explorer.bind("<Leave>", self.file_on_leave)
-        self.file_explorer.bind("<Enter>", self.file_on_enter)
-        self.start_button.bind("<Leave>", self.on_leave)
-        self.start_button.bind("<Enter>", self.on_enter)
+        ##file explorer
+        #self.file_explorer = tk.Button(taskbar,bg="grey", width=5,height=2,relief='solid',highlightthickness=0,command= lambda: subprocess.call(["python", variables.file_explorer]))
+        #self.file_explorer.pack(side=LEFT)
+#
+#
+        #self.file_explorer.bind("<Leave>", self.file_on_leave)
+        #self.file_explorer.bind("<Enter>", self.file_on_enter)
+        #self.start_button.bind("<Leave>", self.on_leave)
+        #self.start_button.bind("<Enter>", self.on_enter)
         
         #icons
-        self.icon_size(self.max, self.size, self.height, self.width)
+        initialized = False
+        self.icon_size(self.max, self.size, self.height, self.add, initialized)
         
         #----------------------------------------Work in progress (context menu)--------------------------------------------------------------------
 
         #makes the right click menu on desktop
         self.desktop_menu = tk.Menu(self.master.desktop_frame, tearoff=0)
+        self.icon_menu = tk.Menu(self.master.desktop_frame, tearoff=0)
         self.desktop_submenu = tk.Menu(self.master.desktop_frame, tearoff=0)
 
         #view sub menu
@@ -378,10 +412,10 @@ class Desktop_screen():
         self.align_grid_var = tk.BooleanVar()
         self.large_icons_var.set(True)
         self.align_grid_var.set(True)
-        self.view_icons_var.set(True)
-        self.desktop_submenu.add_checkbutton(label="Large icons", command=lambda: self.icon_size(800,100,80,80))
-        self.desktop_submenu.add_checkbutton(label="Medium icons", command=lambda: self.icon_size(900,75,50,50))
-        self.desktop_submenu.add_checkbutton(label="Small icons", command=lambda: self.icon_size(900,50,35,35))
+        self.view_icons_var.set(True)#                                                          max 600 for laptops
+        self.desktop_submenu.add_checkbutton(label="Large icons", command=lambda: self.icon_size(800,140,80,10, False))
+        self.desktop_submenu.add_checkbutton(label="Medium icons", command=lambda: self.icon_size(900,100,50,0, False))
+        self.desktop_submenu.add_checkbutton(label="Small icons", command=lambda: self.icon_size(900,50,35,-10, False))
         self.desktop_submenu.add_separator()
         self.desktop_submenu.add_command(label="Auto Arrange icons")
         self.desktop_submenu.add_checkbutton(label="Align icons to grid", command=self.align_grid)
@@ -407,60 +441,210 @@ class Desktop_screen():
 
 
         #disabled menu options
-        self.desktop_menu.entryconfig("View", state="disabled")
+        self.desktop_menu.entryconfig("View", state="normal")
         self.desktop_menu.entryconfig("Sort by", state="disabled")
         self.desktop_menu.entryconfig("Refresh", state="normal")
 
         self.desktop_menu.entryconfig("Paste", state="disabled")
         self.desktop_menu.entryconfig("Paste shortcut", state="disabled")
 
-        self.desktop_menu.entryconfig("New", state="disabled")
+        self.desktop_menu.entryconfig("New", state="normal")
 
         self.desktop_menu.entryconfig("Display Settings", state="disabled")
         self.desktop_menu.entryconfig("Personalize", state="disabled")
+
+
+        self.desktop_submenu.entryconfig("Large icons", state="normal")
+        self.desktop_submenu.entryconfig("Medium icons", state="normal")
+        self.desktop_submenu.entryconfig("Small icons", state="disabled")
+
+        self.desktop_submenu.entryconfig("Auto Arrange icons", state="disabled")
+        self.desktop_submenu.entryconfig("Align icons to grid", state="disabled")
+
+        self.desktop_submenu.entryconfig("Show desktop icons",  state="disabled")
 
         self.desktop.bind("<Button-3>", self.do_popup)
 
 
         #start button context menu
-        self.start_menu = tk.Menu(self.master.desktop_frame, tearoff=0)
-        self.start_menu.add_command(label="Option 1", command=lambda: print("Option 1 selected"))
-        self.start_menu.add_command(label="Option 2", command=lambda: print("Option 2 selected"))
-        self.start_menu.add_separator()
-        self.start_menu.add_command(label="Exit", command=self.master.desktop_frame.quit)
+        self.rc_start_menu = tk.Menu(self.desktop, tearoff=0)
+        self.rc_start_menu.add_command(label="Option 1", command=lambda: print("Option 1 selected"))
+        self.rc_start_menu.add_command(label="Option 2", command=lambda: print("Option 2 selected"))
+        self.rc_start_menu.add_separator()
+        self.rc_start_menu.add_command(label="Exit", command=sys.exit)
+
+        taskbar.bind("<Button-3>", self.srtmenu_popup)
+
+        #---------------------------------------------------WIP folder context menus---------------------------------------------------
+
+        self.icon_menu.add_command(label="Open")
+        self.icon_menu.add_cascade(label="7-Zip")
+        self.icon_menu.add_separator()
+        self.icon_menu.add_cascade(label="Give access to")
+        self.icon_menu.add_command(label="Restore previous versions")
+        self.icon_menu.add_cascade(label="Include in libary")
+        self.icon_menu.add_command(label="Pin to start")
+        self.icon_menu.add_separator()
+        self.icon_menu.add_cascade(label="Send to")
+        self.icon_menu.add_separator()
+        self.icon_menu.add_command(label="Cut")
+        self.icon_menu.add_command(label="Copy")
+        self.icon_menu.add_separator()
+        self.icon_menu.add_command(label="Create shortcut")
+        self.icon_menu.add_command(label="Delete")
+        self.icon_menu.add_command(label="Rename")
+        self.icon_menu.add_separator()
+        self.icon_menu.add_command(label="Properties")
+
+    def file_explorer_fcn(self, event=None):
+        subprocess.call(["python", variables.file_explorer])
+
+    def srtmenu_sidebar_enter(self, event=None):
+        self.sm_sidebar.after(500, self.start_menu_right())
+
+    def srtmenu_sidebar_leave(self, event=None):
+        self.sm_sidebar.after(100, self.start_menu_left())
+        
+    def start_menu_windows(self):
+
+        self.sm_sidebar = tk.Canvas(self.start_menu, background='#181818',
+         width=60, height=655, highlightthickness=0)
+
+        self.sm_sidebar.place(anchor=NW)
+        self.sm_sidebar.bind("<Enter>", self.srtmenu_sidebar_enter)
+        self.sm_sidebar.bind("<Leave>", self.srtmenu_sidebar_leave)
+        menu = self.sm_sidebar.create_image(0,0,anchor=NW,image=self.menu)
+        self.sm_sidebar.create_text(70,
+                                         15,
+                                         text="START"
+                                         , font=("freemono bold", 16),
+                                         anchor="nw",
+                                         fill="white")
+        self.sm_sidebar.tag_bind(menu, "<Button-1>", self.srtmenu_sidebar_call)
+        
+        self.sm_sidebar.create_image(0,405,anchor=NW,image=self.account)
+        self.sm_sidebar.create_text(70,
+                                         420,
+                                         text=Auth.username
+                                         , font=("Arial", 16),
+                                         anchor="nw",
+                                         fill="white")
+        self.sm_sidebar.create_image(0,455,anchor=NW,image=self.document)
+        self.sm_sidebar.create_text(70,
+                                         470,
+                                         text="Document"
+                                         , font=("Arial", 16),
+                                         anchor="nw",
+                                         fill="white")
+        self.sm_sidebar.create_image(0,505,anchor=NW,image=self.photos)
+        self.sm_sidebar.create_text(70,
+                                         520,
+                                         text="Pictures"
+                                         , font=("Arial", 16),
+                                         anchor="nw",
+                                         fill="white")
+        self.sm_sidebar.create_image(0,555,anchor=NW,image=self.settings)
+        self.sm_sidebar.create_text(70,
+                                         570,
+                                         text="Settings"
+                                         , font=("Arial", 16),
+                                         anchor="nw",
+                                         fill="white")
+        self.sm_sidebar.create_image(0,605,anchor=NW,image=self.power)
+        self.sm_sidebar.create_text(70,
+                                         620,
+                                         text="Power"
+                                         , font=("Arial", 16),
+                                         anchor="nw",
+                                         fill="white")
+
+        return
+
+    def srtmenu_sidebar_call(self, event):
+        if self.side_bar_active == True:
+            self.start_menu_left()
+            self.side_bar_active == False
+        else:
+            self.side_bar_active = True
+            self.start_menu_right()
+
+    def start_button_menu_call(self, event):
+        if self.show_start_menu == False:
+            if self.side_bar_active:
+                self.start_menu_left()
+            self.side_bar_initialized = False
+            self.start_menu_down()
+            self.show_start_menu = True
+        else:
+            self.start_menu_up()
+            self.show_start_menu = False
+
+    def start_menu_right(self, t=60):
+        if self.side_bar_initialized:
+            self.sm_sidebar.configure(width=t)
+            if t > 300:
+                self.side_bar_active = True
+                return
+        window.after(1, self.start_menu_right, t+5)
+
+    def start_menu_left(self, t=300):
+        if self.side_bar_active:
+            self.sm_sidebar.configure(width=t)
+            if t < 60:
+                self.side_bar_active = False
+                return
+        window.after(1, self.start_menu_left, t-5)
+    
+        #t = 76 for laptops
+    def start_menu_down(self, t=390):
+        self.start_menu.place(x=0, y=t)
+        if t > 1080:
+            return
+        window.after(1, self.start_menu_down, t+5)
+
+        #t = 771 for laptops
+    def start_menu_up(self, t=1080):
+        self.start_menu.place(x=0, y=t)
+        if t < 390:
+            self.side_bar_initialized = True
+            return
+        window.after(1, self.start_menu_up, t-5)
 
     def new_folder(self):
+        icon_y = self.menu_y
+        icon_x = self.menu_x
         
         if self.new_folder_copy == 0:
-            new_folder_name = "New Folder"
+            files = "New Folder"
         else:
-            new_folder_name = f"New Folder ({self.new_folder_copy})"
-        if os.path.exists(f"{variables.users}\\{Auth.username}\\desktop\\{new_folder_name}"):
+            files = f"New Folder ({self.new_folder_copy})"
+        if os.path.exists(f"{variables.users}\\{Auth.username}\\desktop\\{files}"):
             self.new_folder_copy += 1
             self.new_folder()
             return
 
-        os.makedirs(f"{variables.users}\\{Auth.username}\\desktop\\{new_folder_name}")
-        self.file_icon = tk.Button(self.desktop, width=self.icon_width, height=self.icon_height,highlightthickness=0,state='disabled')
-        self.file_icon.config(image=self.icon_photo, compound="top")
-        self.file_icon.config(wraplength=65)
-        self.file_icon.config(text=new_folder_name[:15] + "..." if len(new_folder_name) > 15 else new_folder_name)
-        self.menu_x = (self.menu_x + self.icon_numsize//2)
-        self.menu_y = (self.menu_y + self.icon_numsize//2)
-        self.menu_x = (self.menu_x // self.icon_numsize) * self.icon_numsize
-        self.menu_y = (self.menu_y // self.icon_numsize) * self.icon_numsize
-        while any(button != self.file_icon and button.winfo_x() == self.menu_x and button.winfo_y() == self.menu_y for button in self.desktop.winfo_children()):
-            self.menu_x += self.icon_numsize
-            self.menu_y += self.icon_numsize
-        self.file_icon.place(x=self.menu_x, y=self.menu_y)
+        os.makedirs(f"{variables.users}\\{Auth.username}\\desktop\\{files}")
+
+        self.image = self.desktop.create_image(icon_x, icon_y, image=self.folders)
+        self.img_ref.append(self.icon_photo)
+        self.img_ref.append(self.folders)
+        text = self.desktop.create_text(icon_x,
+                                        icon_y + 30,
+                                        text=files[:15] + "..." if len(files) > 15 else files,
+                                        anchor="n", font=("Arial", 11))
+        self.text_ref.append(text)
         
+        x = int(icon_x/100)*100
+        y = int(icon_y/100)*100
+        if self.grid == False:
+            return
+        self.desktop.coords(self.image, x+50, y+50)
+        self.desktop.coords(text, x+50, y+80 )
 
-        self.file_icon.bind('<B1-Motion>',lambda e, b=self.file_icon: self.move_icon(e, b))
-        self.file_icon.bind('<ButtonRelease-1>',lambda e: self.icon_place(e))
-
-    def show_start_menu(self):
-        x, y = self.start_button.winfo_rootx(), self.start_button.winfo_rooty()
-        self.start_menu.post(x, y)
+        self.desktop.tag_bind(self.image, "<Button-1>", lambda event, img=self.image, txt=text: self.on_image_press(event, img, txt))
+        self.desktop.tag_bind(text, "<Double-1>", lambda event, txt=text, file=files: self.on_img_rename(event, txt, file))
+        self.desktop.tag_bind(self.image, "<B1-Motion>", lambda event, img=self.image, txt=text: self.on_image_move(event, img, txt))
+        self.desktop.tag_bind(self.image, "<ButtonRelease-1>", lambda event, img=self.image, txt=text: self.on_image_release(event, img, txt))
 
     def on_leave(self,e):
         self.start_button['background'] = 'dark grey'
@@ -485,12 +669,40 @@ class Desktop_screen():
         finally:
             self.desktop_menu.grab_release()
 
-    def icon_size(self, max, size, height, width):
+    def srtmenu_popup(self, event):
+        self.menu_x = event.x_root
+        self.menu_y = event.y_root
+        try:
+            self.rc_start_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.rc_start_menu.grab_release()
+
+    def icon_popup(self, event):
+        self.menu_x = event.x_root
+        self.menu_y = event.y_root
+        try:
+            self.icon_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.icon_menu.grab_release()
+
+    def icon_size(self, max, size, height, add, initialized):
         self.icon_max = max
         self.icon_numsize = size
+        self.height = height
+        self.add = add
+        if height == 80:
+            self.icon_photo = PhotoImage(file=os.path.join(variables.icon_images, "UnknownIcon_Large.png"))
+            self.folders = PhotoImage(file=os.path.join(variables.icon_images, "Folder_large.png"))
+        if height == 50:
+            self.icon_photo = PhotoImage(file=os.path.join(variables.icon_images, "UnknownIcon_Medium.png"))
+            self.folders = PhotoImage(file=os.path.join(variables.icon_images, "Folder_medium.png"))
+        if height == 35:
+            self.icon_photo = PhotoImage(file=os.path.join(variables.icon_images, "UnknownIcon_Medium.png"))
+            self.folders = ImageTk.PhotoImage(Image.open(os.path.join(variables.icon_images, "Folder_medium.png")))
         self.icon_height = height
-        self.icon_width = width
-        self.place_icons()
+        if not initialized:
+            self.place_icons()
+        return
 
     def veiw_icons(self):
         if self.view_icons_value != True:
@@ -502,48 +714,49 @@ class Desktop_screen():
                 if isinstance(button, tk.Button):
                     button.destroy()
 
-    #places the icons
-
-    def print_all_methods(self, var):
-        for m in dir(var):
-            if not m.startswith("_"):
-                res = getattr(var, m)
-                if str(res).startswith("<bound"):
-                    try:
-                        res = getattr(var, m)()
-                    except Exception as e:
-                        res = f"ERROR: {e}"
-                print(f"{m}: {res}")
-
     def place_icons(self):
         variables.refresh_var()
+        max = self.icon_max
+        size = self.icon_numsize
+        height = self.height
+        add = self.add
+        initialized = True
+        self.icon_size(max, size, height, add, initialized)
         
         for image in self.img_ref:
             self.desktop.delete(image)
+
         for text in self.text_ref:
             self.desktop.delete(text)
 
-        icon_y = 50
-        icon_x = 50
+        icon_y = self.icon_height-add
+        icon_x = self.icon_height-add
         self.img_ref = []
         self.text_ref = []
         for files in os.listdir(variables.desktop_list):
-            
-            self.simage = PhotoImage(file="C:\\Users\\Musetex\\Desktop\\Desktop\\image.png")
-            self.image = self.desktop.create_image(icon_x, icon_y, image=self.simage)
-            self.img_ref.append(self.simage)
+            file_path = os.path.join(variables.desktop_list, files)
+            if os.path.isdir(file_path):
+                self.image = self.desktop.create_image(icon_x, icon_y, image=self.folders)
+            else:
+                self.image = self.desktop.create_image(icon_x, icon_y, image=self.icon_photo)
+            self.img_ref.append(self.icon_photo)
+            self.img_ref.append(self.folders)
+
             text = self.desktop.create_text(icon_x,
-                                         icon_y + 30,
+                                         icon_y + 30 + (self.add*2+self.add//2),
                                          text=files[:15] + "..." if len(files) > 15 else files,
                                          anchor="n", font=("Arial", 11))
             self.text_ref.append(text)
             
             self.desktop.tag_bind(self.image, "<Button-1>", lambda event, img=self.image, txt=text: self.on_image_press(event, img, txt))
+            self.desktop.tag_bind(self.image, "<Button-3>", self.icon_popup)
+            self.desktop.tag_bind(text, "<Double-1>", lambda event, txt=text, file=files: self.on_img_rename(event, txt, file))
             self.desktop.tag_bind(self.image, "<B1-Motion>", lambda event, img=self.image, txt=text: self.on_image_move(event, img, txt))
             self.desktop.tag_bind(self.image, "<ButtonRelease-1>", lambda event, img=self.image, txt=text: self.on_image_release(event, img, txt))
+            
 
             if icon_y > self.icon_max:
-                icon_y = 0
+                icon_y = -50-(self.add*2)
                 icon_x += self.icon_numsize
             icon_y += self.icon_numsize
 
@@ -554,6 +767,18 @@ class Desktop_screen():
         self.desktop.y = event.y
         self.desktop.coords(img, self.x, self.y)
         self.desktop.coords(txt, self.x, self.y)
+
+    def on_img_rename(self, event, text, file_name):
+        self.rename_text_box = tk.Entry(window)
+        self.rename_text_box.bind('<Return>', lambda event, txt=text, file=file_name: self.update(event, txt, file))
+        self.desktop.create_window(event.x, event.y, window=self.rename_text_box, tag='entry')
+
+    def update(self, event, text, file_name):
+        self.desktop.delete('entry')
+        self.desktop.itemconfig(text, text=self.rename_text_box.get())
+        os.rename(f"{variables.desktop_list}\\{file_name}", f"{variables.desktop_list}\\{self.rename_text_box.get()}")
+        
+        
 
     # function to handle the move event
     def on_image_move(self, event, img, txt):
@@ -567,13 +792,12 @@ class Desktop_screen():
     # function to handle the release event
     def on_image_release(self, event, img, txt):
         self.desktop.configure(cursor="")
-        x = int(event.x/100)*100
-        y = int(event.y/100)*100
+        x = int(event.x/self.icon_numsize)*self.icon_numsize
+        y = int(event.y/self.icon_numsize)*self.icon_numsize
         if self.grid == False:
             return
-        self.desktop.coords(img, x+50, y+50)
-        self.desktop.coords(txt, x+50, y+80 )
-        
+        self.desktop.coords(img, x+self.icon_numsize//2, y+self.icon_numsize//2)
+        self.desktop.coords(txt, x+self.icon_numsize//2, y+self.height+self.height//2+5 )
 
     def align_grid(self):
         if self.grid == True:
@@ -592,30 +816,16 @@ class Desktop_screen():
                                 self.file_icon.place(x=existing_button.winfo_x()+self.icon_numsize, y=existing_button.winfo_y()+self.icon_numsize)
                                 return
                     button.place_configure(x=x,y=y)
-    
-    def icon_place(self, event):
-        self.file_icon = event.widget
-        self.x = event.x
-        self.y = event.y
-        grid_x = event.x_root - self.x
-        grid_y = event.y_root - self.y
-        if self.grid == False:
-            self.file_icon.place(x=grid_x, y=grid_y)
-        else:
-            grid_x = (grid_x + self.icon_numsize//2)
-            grid_y = (grid_y + self.icon_numsize//2)
-            grid_x = (grid_x // self.icon_numsize) * self.icon_numsize
-            grid_y = (grid_y // self.icon_numsize) * self.icon_numsize
-            while any(button != self.file_icon and button.winfo_x() == grid_x and button.winfo_y() == grid_y for button in self.desktop.winfo_children()):
-                grid_x += self.icon_numsize
-                grid_y += self.icon_numsize
-            self.file_icon.place(x=grid_x, y=grid_y)
-        
-
 
 if __name__ == "__main__":
     if not os.path.exists("Users"):
         os.mkdir("Users")
+    for m in get_monitors():
+        e = str(m)
+        #print(e.split(",",100))
+    os.system('taskkill /f /im explorer.exe')
+
+    atexit.register(exit_handler)
     window = App()
     variables = Variables()
     signup_screen = Signup_screen(window)
