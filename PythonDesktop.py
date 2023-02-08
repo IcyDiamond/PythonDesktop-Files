@@ -818,8 +818,9 @@ class Desktop_screen():
                     button.place_configure(x=x,y=y)
 
 if __name__ == "__main__":
-    if not os.path.exists("Users"):
-        os.mkdir("Users")
+    variables = Variables()
+    if not os.path.exists(f"{variables.current_directory}\\Users"):
+        os.mkdir(f"{variables.current_directory}\\Users")
     for m in get_monitors():
         e = str(m)
         #print(e.split(",",100))
@@ -827,6 +828,5 @@ if __name__ == "__main__":
 
     atexit.register(exit_handler)
     window = App()
-    variables = Variables()
     signup_screen = Signup_screen(window)
     window.mainloop()
