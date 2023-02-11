@@ -3,16 +3,29 @@ from tkinter.constants import *
 from PIL import Image, ImageTk
 from tkinter import PhotoImage
 from tkinter import messagebox
+from threading import Thread
 import tkinter as tk
 import subprocess
+import signal
 import atexit
 import json
+import time
 import sys
 import os
 
+threadlist = []
+threadlist.append(Thread(target=lambda: os.system('explorer.exe &')))
+threadlist.append(Thread(target=lambda: os.kill(os.getpid(), signal.SIGTERM)))
+
 def exit_handler():
-    os.system('explorer.exe &')
-    sys.exit
+    for t in threadlist:
+        time.sleep(1)
+        t.start()
+
+    for t in threadlist:
+        time.sleep(1)
+        t.join()
+    
 
 class App(tk.Tk):
     def __init__(self):
@@ -37,6 +50,13 @@ class Variables:
         self.desktop_list = f"{self.users}\\{Auth.username}\\desktop"
         self.icon_images = os.path.join(f"{self.desktop_files}\\Windows\\system32")
 
+        self.monitors = get_monitors()
+        for i in range(len(self.monitors)):
+            if self.monitors[i].is_primary == False:
+                pass
+            else:
+                self.monitor_width = self.monitors[i].width
+                self.monitor_height = self.monitors[i].height
     
     def refresh_var(self):
         self.current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -46,6 +66,15 @@ class Variables:
         self.file_temp_icon = os.path.join(self.desktop_files, "image.png")
         self.desktop_list = f"{self.users}\\{Auth.username}\\desktop"
         self.icon_images = os.path.join(f"{self.desktop_files}\\Windows\\system32")
+        self.monitors = get_monitors()
+
+        self.monitors = get_monitors()
+        for i in range(len(self.monitors)):
+            if self.monitors[i].is_primary == False:
+                pass
+            else:
+                self.monitor_width = self.monitors[i].width
+                self.monitor_height = self.monitors[i].height
 
 class Auth:
     username = ""
@@ -382,7 +411,7 @@ class Desktop_screen():
         file_explorer = taskbar.create_image(0+49,0,anchor=NW,image=self.start_icon)
         taskbar.create_image(0+49+49,0,anchor=NW,image=self.start_icon)
         taskbar.tag_bind(start_button, "<Button-1>", self.start_button_menu_call)
-        taskbar.tag_bind(file_explorer, "<Button-1>", self.file_explorer_fcn)
+        taskbar.tag_bind(file_explorer, "<Button-1>", self.start_file_explorer)
         window.bind("<Win_L>", self.start_button_menu_call)
 
         ##file explorer
@@ -471,7 +500,7 @@ class Desktop_screen():
         self.rc_start_menu.add_command(label="Option 1", command=lambda: print("Option 1 selected"))
         self.rc_start_menu.add_command(label="Option 2", command=lambda: print("Option 2 selected"))
         self.rc_start_menu.add_separator()
-        self.rc_start_menu.add_command(label="Exit", command=sys.exit)
+        self.rc_start_menu.add_command(label="Exit", command=exit_handler)
 
         taskbar.bind("<Button-3>", self.srtmenu_popup)
 
@@ -496,15 +525,13 @@ class Desktop_screen():
         self.icon_menu.add_separator()
         self.icon_menu.add_command(label="Properties")
 
-    def file_explorer_fcn(self, event=None):
+    def start_file_explorer(self, event=None):
         subprocess.call(["python", variables.file_explorer])
 
     def srtmenu_sidebar_enter(self, event=None):
         self.sm_sidebar.after(500, self.start_menu_right())
-
     def srtmenu_sidebar_leave(self, event=None):
-        self.sm_sidebar.after(100, self.start_menu_left())
-        
+        self.sm_sidebar.after(100, self.start_menu_left())     
     def start_menu_windows(self):
 
         self.sm_sidebar = tk.Canvas(self.start_menu, background='#181818',
@@ -559,7 +586,6 @@ class Desktop_screen():
                                          fill="white")
 
         return
-
     def srtmenu_sidebar_call(self, event):
         if self.side_bar_active == True:
             self.start_menu_left()
@@ -567,7 +593,6 @@ class Desktop_screen():
         else:
             self.side_bar_active = True
             self.start_menu_right()
-
     def start_button_menu_call(self, event):
         if self.show_start_menu == False:
             if self.side_bar_active:
@@ -586,7 +611,6 @@ class Desktop_screen():
                 self.side_bar_active = True
                 return
         window.after(1, self.start_menu_right, t+5)
-
     def start_menu_left(self, t=300):
         if self.side_bar_active:
             self.sm_sidebar.configure(width=t)
@@ -642,6 +666,7 @@ class Desktop_screen():
         self.desktop.coords(text, x+50, y+80 )
 
         self.desktop.tag_bind(self.image, "<Button-1>", lambda event, img=self.image, txt=text: self.on_image_press(event, img, txt))
+        self.desktop.tag_bind(self.image, "<Button-3>", self.icon_popup)
         self.desktop.tag_bind(text, "<Double-1>", lambda event, txt=text, file=files: self.on_img_rename(event, txt, file))
         self.desktop.tag_bind(self.image, "<B1-Motion>", lambda event, img=self.image, txt=text: self.on_image_move(event, img, txt))
         self.desktop.tag_bind(self.image, "<ButtonRelease-1>", lambda event, img=self.image, txt=text: self.on_image_release(event, img, txt))
@@ -778,8 +803,6 @@ class Desktop_screen():
         self.desktop.itemconfig(text, text=self.rename_text_box.get())
         os.rename(f"{variables.desktop_list}\\{file_name}", f"{variables.desktop_list}\\{self.rename_text_box.get()}")
         
-        
-
     # function to handle the move event
     def on_image_move(self, event, img, txt):
         if self.selected_img == img:
@@ -821,11 +844,7 @@ if __name__ == "__main__":
     variables = Variables()
     if not os.path.exists(f"{variables.current_directory}\\Users"):
         os.mkdir(f"{variables.current_directory}\\Users")
-    for m in get_monitors():
-        e = str(m)
-        #print(e.split(",",100))
     os.system('taskkill /f /im explorer.exe')
-
     atexit.register(exit_handler)
     window = App()
     signup_screen = Signup_screen(window)
