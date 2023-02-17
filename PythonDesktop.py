@@ -610,7 +610,7 @@ class Desktop_screen():
         self.sm_sidebar.configure(width=t)
         if t > 300:
             self.side_bar_active = True
-            print(self.side_bar_active)
+            #print(self.side_bar_active)
             return
         window.after(1, self.start_menu_right, t+5)
     def start_menu_left(self, t=300):
@@ -618,7 +618,7 @@ class Desktop_screen():
             self.sm_sidebar.configure(width=t)
             if t < 60:
                 self.side_bar_active = False
-                print(self.side_bar_active)
+                #print(self.side_bar_active)
                 return
         window.after(1, self.start_menu_left, t-5)
     
@@ -817,7 +817,6 @@ class Desktop_screen():
 
         self.icon_id = 0
 
-
     def on_image_press(self, event, img, txt):
         self.selected_img = img
         self.desktop.configure(cursor="fleur")
@@ -840,7 +839,7 @@ class Desktop_screen():
     def on_image_move(self, event, img, txt):
         image_id = self.desktop.gettags(img)[0]
         location = self.icon_dict[image_id]
-        print("Clicked image:", image_id, "Location:", location)
+
         if self.selected_img == img:
             x, y = (event.x - self.desktop.x), (event.y - self.desktop.y)
             self.desktop.move(self.selected_img, x, y)
