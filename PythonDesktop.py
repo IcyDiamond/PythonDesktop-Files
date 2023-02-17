@@ -406,14 +406,17 @@ class Desktop_screen():
         self.start_menu_windows()
 
         #taskbar
-        taskbar = tk.Canvas(self.desktop, background='#1d1d1d',height=40, highlightthickness=0)
-        taskbar.pack(side=BOTTOM,fill=X)
-        start_button = taskbar.create_image(0, 0, anchor=NW, image=self.start_icon)
-        file_explorer = taskbar.create_image(0+49,0,anchor=NW,image=self.start_icon)
-        taskbar.create_image(0+49+49,0,anchor=NW,image=self.start_icon)
-        taskbar.tag_bind(start_button, "<Button-1>", self.start_button_menu_call)
-        taskbar.tag_bind(file_explorer, "<Button-1>", self.start_file_explorer)
+        self.taskbar = tk.Canvas(self.desktop, background='#1d1d1d',height=40, highlightthickness=0)
+        self.taskbar.pack(side=BOTTOM,fill=X)
+        start_button = self.taskbar.create_image(0, 0, anchor=NW, image=self.start_icon)
+        file_explorer = self.taskbar.create_image(0+49,0,anchor=NW,image=self.start_icon)
+        self.taskbar.create_image(0+49+49,0,anchor=NW,image=self.start_icon)
+        self.taskbar.tag_bind(start_button, "<Button-1>", self.start_button_menu_call)
+        self.taskbar.tag_bind(file_explorer, "<Button-1>", self.start_file_explorer)
         window.bind("<Win_L>", self.start_button_menu_call)
+
+        self.clock = self.taskbar.create_text(variables.monitor_width-120, 0, text="00:00", anchor="nw",fill = "white", font=('Arial', 11, 'bold'))
+        self.update_clock()
 
         ##file explorer
         #self.file_explorer = tk.Button(taskbar,bg="grey", width=5,height=2,relief='solid',highlightthickness=0,command= lambda: subprocess.call(["python", variables.file_explorer]))
@@ -503,7 +506,7 @@ class Desktop_screen():
         self.rc_start_menu.add_separator()
         self.rc_start_menu.add_command(label="Exit", command=exit_handler)
 
-        taskbar.bind("<Button-3>", self.srtmenu_popup)
+        self.taskbar.bind("<Button-3>", self.srtmenu_popup)
 
         #---------------------------------------------------WIP folder context menus---------------------------------------------------
 
@@ -525,6 +528,17 @@ class Desktop_screen():
         self.icon_menu.add_command(label="Rename")
         self.icon_menu.add_separator()
         self.icon_menu.add_command(label="Properties")
+
+    def update_clock(self):
+
+        current_time = time.strftime('%H:%M')
+        if int(time.strftime('%H')) <= 12:
+            timeofday = "A"
+        else:
+            timeofday = "P"
+        self.taskbar.itemconfig(self.clock, text=f"{current_time} {timeofday}M")
+
+        self.taskbar.after(1000, self.update_clock)
 
     def start_file_explorer(self, event=None):
         subprocess.call(["python", variables.file_explorer])
