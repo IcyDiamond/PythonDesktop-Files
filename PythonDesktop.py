@@ -46,7 +46,6 @@ class Variables:
         self.desktop_files = os.path.dirname(os.path.abspath(__file__))
         self.users = os.path.join(self.desktop_files, "users")
         self.file_explorer = os.path.join(self.desktop_files, "FileExplorer.py")
-        self.file_temp_icon = os.path.join(self.current_directory, "image.png")
         self.desktop_list = f"{self.users}\\{Auth.username}\\desktop"
         self.icon_images = os.path.join(f"{self.desktop_files}\\Windows\\system32")
 
@@ -63,7 +62,6 @@ class Variables:
         self.desktop_files = os.path.dirname(os.path.abspath(__file__))
         self.users = os.path.join(self.desktop_files, "users")
         self.file_explorer = os.path.join(self.desktop_files, "FileExplorer.py")
-        self.file_temp_icon = os.path.join(self.desktop_files, "image.png")
         self.desktop_list = f"{self.users}\\{Auth.username}\\desktop"
         self.icon_images = os.path.join(f"{self.desktop_files}\\Windows\\system32")
         self.monitors = get_monitors()
@@ -357,6 +355,7 @@ class Desktop_screen():
         self.master = master
         self.img_ref = []
         self.text_ref = []
+        self.icon_dict = {}
         self.view_icons_value = True
         self.grid=True
         self.new_folder_copy = 0
@@ -369,6 +368,8 @@ class Desktop_screen():
         self.image = None
         self.x = None
         self.y = None
+        self.icon_id = 0
+        self.monitor_height = variables.monitor_height
         
         self.max = 900
         self.size = 100
@@ -529,9 +530,11 @@ class Desktop_screen():
         subprocess.call(["python", variables.file_explorer])
 
     def srtmenu_sidebar_enter(self, event=None):
-        self.sm_sidebar.after(500, self.start_menu_right())
+        if self.side_bar_initialized:
+            self.sm_sidebar.after(500, self.start_menu_right())
     def srtmenu_sidebar_leave(self, event=None):
-        self.sm_sidebar.after(100, self.start_menu_left())     
+        if self.side_bar_active:
+            self.sm_sidebar.after(100, self.start_menu_left())     
     def start_menu_windows(self):
 
         self.sm_sidebar = tk.Canvas(self.start_menu, background='#181818',
@@ -587,12 +590,11 @@ class Desktop_screen():
 
         return
     def srtmenu_sidebar_call(self, event):
-        if self.side_bar_active == True:
+        if self.side_bar_active:
             self.start_menu_left()
-            self.side_bar_active == False
         else:
-            self.side_bar_active = True
-            self.start_menu_right()
+            if self.side_bar_initialized:
+                self.start_menu_right()
     def start_button_menu_call(self, event):
         if self.show_start_menu == False:
             if self.side_bar_active:
@@ -601,35 +603,37 @@ class Desktop_screen():
             self.start_menu_down()
             self.show_start_menu = True
         else:
-            self.start_menu_up()
+            self.start_menu_up(self.monitor_height)
             self.show_start_menu = False
 
     def start_menu_right(self, t=60):
-        if self.side_bar_initialized:
-            self.sm_sidebar.configure(width=t)
-            if t > 300:
-                self.side_bar_active = True
-                return
+        self.sm_sidebar.configure(width=t)
+        if t > 300:
+            self.side_bar_active = True
+            print(self.side_bar_active)
+            return
         window.after(1, self.start_menu_right, t+5)
     def start_menu_left(self, t=300):
         if self.side_bar_active:
             self.sm_sidebar.configure(width=t)
             if t < 60:
                 self.side_bar_active = False
+                print(self.side_bar_active)
                 return
         window.after(1, self.start_menu_left, t-5)
     
         #t = 76 for laptops
+
     def start_menu_down(self, t=390):
         self.start_menu.place(x=0, y=t)
-        if t > 1080:
+        if t > variables.monitor_height:
             return
         window.after(1, self.start_menu_down, t+5)
 
         #t = 771 for laptops
-    def start_menu_up(self, t=1080):
+    def start_menu_up(self, t):
         self.start_menu.place(x=0, y=t)
-        if t < 390:
+        if t < self.monitor_height-690:
             self.side_bar_initialized = True
             return
         window.after(1, self.start_menu_up, t-5)
@@ -758,19 +762,45 @@ class Desktop_screen():
         icon_x = self.icon_height-add
         self.img_ref = []
         self.text_ref = []
+
+        try:
+            with open(f"{variables.users}\\{Auth.username}\\icon_position.json", "r") as file:
+                self.icon_dict = json.load(file)
+        except:
+            self.icon_dict = self.icon_dict
+
         for files in os.listdir(variables.desktop_list):
             file_path = os.path.join(variables.desktop_list, files)
-            if os.path.isdir(file_path):
-                self.image = self.desktop.create_image(icon_x, icon_y, image=self.folders)
+
+            image_id = "image_" + str(self.icon_id)
+
+            if image_id in self.icon_dict:
+                # If the image already has a location in the dictionary, use that location
+                icon_x, icon_y = self.icon_dict[image_id]
             else:
-                self.image = self.desktop.create_image(icon_x, icon_y, image=self.icon_photo)
+                # If the image doesn't have a location in the dictionary, find the next available grid cell
+                while self.icon_dict.get("cell_" + str(icon_x) + "_" + str(icon_y)):
+                    icon_y += self.icon_numsize
+                    if icon_y > self.icon_max:
+                        icon_y = -50-(self.add*2)
+                        icon_x += self.icon_numsize
+                self.icon_dict[image_id] = (icon_x, icon_y)
+                self.icon_dict["cell_" + str(icon_x) + "_" + str(icon_y)] = image_id
+
+            if os.path.isdir(file_path):
+                self.image = self.desktop.create_image(icon_x, icon_y, image=self.folders, tags=image_id)
+            else:
+                self.image = self.desktop.create_image(icon_x, icon_y, image=self.icon_photo, tags=image_id)
+
+            self.icon_id += 1
+
             self.img_ref.append(self.icon_photo)
             self.img_ref.append(self.folders)
 
             text = self.desktop.create_text(icon_x,
-                                         icon_y + 30 + (self.add*2+self.add//2),
-                                         text=files[:15] + "..." if len(files) > 15 else files,
-                                         anchor="n", font=("Arial", 11))
+                                        icon_y + 30 + (self.add*2+self.add//2),
+                                        text=files[:15] + "..." if len(files) > 15 else files,
+                                        anchor="n", font=("Arial", 11))
             self.text_ref.append(text)
             
             self.desktop.tag_bind(self.image, "<Button-1>", lambda event, img=self.image, txt=text: self.on_image_press(event, img, txt))
@@ -778,12 +808,15 @@ class Desktop_screen():
             self.desktop.tag_bind(text, "<Double-1>", lambda event, txt=text, file=files: self.on_img_rename(event, txt, file))
             self.desktop.tag_bind(self.image, "<B1-Motion>", lambda event, img=self.image, txt=text: self.on_image_move(event, img, txt))
             self.desktop.tag_bind(self.image, "<ButtonRelease-1>", lambda event, img=self.image, txt=text: self.on_image_release(event, img, txt))
-            
+
 
             if icon_y > self.icon_max:
                 icon_y = -50-(self.add*2)
                 icon_x += self.icon_numsize
             icon_y += self.icon_numsize
+
+        self.icon_id = 0
+
 
     def on_image_press(self, event, img, txt):
         self.selected_img = img
@@ -805,6 +838,9 @@ class Desktop_screen():
         
     # function to handle the move event
     def on_image_move(self, event, img, txt):
+        image_id = self.desktop.gettags(img)[0]
+        location = self.icon_dict[image_id]
+        print("Clicked image:", image_id, "Location:", location)
         if self.selected_img == img:
             x, y = (event.x - self.desktop.x), (event.y - self.desktop.y)
             self.desktop.move(self.selected_img, x, y)
@@ -821,6 +857,12 @@ class Desktop_screen():
             return
         self.desktop.coords(img, x+self.icon_numsize//2, y+self.icon_numsize//2)
         self.desktop.coords(txt, x+self.icon_numsize//2, y+self.height+self.height//2+5 )
+
+        # update location of the image in the dictionary
+        image_id = self.desktop.gettags(img)[0]
+        self.icon_dict[image_id] = (x+self.icon_numsize//2, y+self.icon_numsize//2)
+        with open(f"{variables.users}\\{Auth.username}\\icon_position.json", "w") as file:
+            json.dump(self.icon_dict, file)
 
     def align_grid(self):
         if self.grid == True:

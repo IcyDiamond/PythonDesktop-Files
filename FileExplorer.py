@@ -49,6 +49,8 @@ class Path:
     def pathChange(self,*event,data):
         # Get all Files and Folders from the given Directory
         this_pc()
+        directory = os.listdir(currentPath.get())
+        data = directory
         # Clearing the list
         filelist.delete(0, END)
         # Inserting the files and directories into the list
