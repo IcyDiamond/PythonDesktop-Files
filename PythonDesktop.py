@@ -4,6 +4,7 @@ from PIL import Image, ImageTk
 from tkinter import PhotoImage
 from tkinter import messagebox
 from threading import Thread
+from Taskbar import Taskbar
 import tkinter as tk
 import subprocess
 import signal
@@ -13,18 +14,18 @@ import time
 import sys
 import os
 
-threadlist = []
-threadlist.append(Thread(target=lambda: os.system('explorer.exe &')))
-threadlist.append(Thread(target=lambda: os.kill(os.getpid(), signal.SIGTERM)))
+#threadlist = []
+#threadlist.append(Thread(target=lambda: os.system('explorer.exe &')))
+#threadlist.append(Thread(target=lambda: os.kill(os.getpid(), signal.SIGTERM)))
 
-def exit_handler():
-    for t in threadlist:
-        time.sleep(1)
-        t.start()
-
-    for t in threadlist:
-        time.sleep(1)
-        t.join()
+#def exit_handler():
+#    for t in threadlist:
+#        time.sleep(1)
+#        t.start()
+#
+#    for t in threadlist:
+#        time.sleep(1)
+#        t.join()
     
 
 class App(tk.Tk):
@@ -371,10 +372,17 @@ class Desktop_screen():
         self.icon_id = 0
         self.monitor_height = variables.monitor_height
         
+        
+        
         self.max = 900
         self.size = 100
         self.height = 50
         self.add = 0
+
+    def initialize_taskbar(self):
+        self.new_window = tk.Toplevel(self.master)
+        self.start = Taskbar(self.new_window)
+
 
     def initialize_obj(self):
         #clears any widgets
@@ -384,6 +392,7 @@ class Desktop_screen():
         self.master.signin_frame.pack_forget()
         self.master.signup_frame.pack_forget()
         self.master.desktop_frame.pack(fill=BOTH, expand=True)
+        self.initialize_taskbar()
 
         #wallpaper
         self.start_icon = PhotoImage(file=os.path.join(variables.icon_images, "StartButton.png"))
@@ -400,34 +409,7 @@ class Desktop_screen():
         self.desktop.pack(side=LEFT,fill=BOTH, expand=True)
         self.desktop.create_image(0, 0, image = self.wallpaper, anchor = NW)
 
-        #Start menu
-        self.start_menu = tk.Frame(self.desktop, background='#282828', width=640, height=655)
-        self.start_menu.place()
-        self.start_menu_windows()
 
-        #taskbar
-        self.taskbar = tk.Canvas(self.desktop, background='#1d1d1d',height=40, highlightthickness=0)
-        self.taskbar.pack(side=BOTTOM,fill=X)
-        start_button = self.taskbar.create_image(0, 0, anchor=NW, image=self.start_icon)
-        file_explorer = self.taskbar.create_image(0+49,0,anchor=NW,image=self.start_icon)
-        self.taskbar.create_image(0+49+49,0,anchor=NW,image=self.start_icon)
-        self.taskbar.tag_bind(start_button, "<Button-1>", self.start_button_menu_call)
-        self.taskbar.tag_bind(file_explorer, "<Button-1>", self.start_file_explorer)
-        window.bind("<Win_L>", self.start_button_menu_call)
-
-        self.clock = self.taskbar.create_text(variables.monitor_width-120, 0, text="00:00", anchor="nw",fill = "white", font=('Arial', 11, 'bold'))
-        self.update_clock()
-
-        ##file explorer
-        #self.file_explorer = tk.Button(taskbar,bg="grey", width=5,height=2,relief='solid',highlightthickness=0,command= lambda: subprocess.call(["python", variables.file_explorer]))
-        #self.file_explorer.pack(side=LEFT)
-#
-#
-        #self.file_explorer.bind("<Leave>", self.file_on_leave)
-        #self.file_explorer.bind("<Enter>", self.file_on_enter)
-        #self.start_button.bind("<Leave>", self.on_leave)
-        #self.start_button.bind("<Enter>", self.on_enter)
-        
         #icons
         initialized = False
         self.icon_size(self.max, self.size, self.height, self.add, initialized)
@@ -498,16 +480,6 @@ class Desktop_screen():
 
         self.desktop.bind("<Button-3>", self.do_popup)
 
-
-        #start button context menu
-        self.rc_start_menu = tk.Menu(self.desktop, tearoff=0)
-        self.rc_start_menu.add_command(label="Option 1", command=lambda: print("Option 1 selected"))
-        self.rc_start_menu.add_command(label="Option 2", command=lambda: print("Option 2 selected"))
-        self.rc_start_menu.add_separator()
-        self.rc_start_menu.add_command(label="Exit", command=exit_handler)
-
-        self.taskbar.bind("<Button-3>", self.srtmenu_popup)
-
         #---------------------------------------------------WIP folder context menus---------------------------------------------------
 
         self.icon_menu.add_command(label="Open")
@@ -529,128 +501,6 @@ class Desktop_screen():
         self.icon_menu.add_separator()
         self.icon_menu.add_command(label="Properties")
 
-    def update_clock(self):
-
-        current_time = time.strftime('%H:%M')
-        if int(time.strftime('%H')) <= 12:
-            timeofday = "A"
-        else:
-            timeofday = "P"
-        self.taskbar.itemconfig(self.clock, text=f"{current_time} {timeofday}M")
-
-        self.taskbar.after(1000, self.update_clock)
-
-    def start_file_explorer(self, event=None):
-        subprocess.call(["python", variables.file_explorer])
-
-    def srtmenu_sidebar_enter(self, event=None):
-        if self.side_bar_initialized:
-            self.sm_sidebar.after(500, self.start_menu_right())
-    def srtmenu_sidebar_leave(self, event=None):
-        if self.side_bar_active:
-            self.sm_sidebar.after(100, self.start_menu_left())     
-    def start_menu_windows(self):
-
-        self.sm_sidebar = tk.Canvas(self.start_menu, background='#181818',
-         width=60, height=655, highlightthickness=0)
-
-        self.sm_sidebar.place(anchor=NW)
-        self.sm_sidebar.bind("<Enter>", self.srtmenu_sidebar_enter)
-        self.sm_sidebar.bind("<Leave>", self.srtmenu_sidebar_leave)
-        menu = self.sm_sidebar.create_image(0,0,anchor=NW,image=self.menu)
-        self.sm_sidebar.create_text(70,
-                                         15,
-                                         text="START"
-                                         , font=("freemono bold", 16),
-                                         anchor="nw",
-                                         fill="white")
-        self.sm_sidebar.tag_bind(menu, "<Button-1>", self.srtmenu_sidebar_call)
-        
-        self.sm_sidebar.create_image(0,405,anchor=NW,image=self.account)
-        self.sm_sidebar.create_text(70,
-                                         420,
-                                         text=Auth.username
-                                         , font=("Arial", 16),
-                                         anchor="nw",
-                                         fill="white")
-        self.sm_sidebar.create_image(0,455,anchor=NW,image=self.document)
-        self.sm_sidebar.create_text(70,
-                                         470,
-                                         text="Document"
-                                         , font=("Arial", 16),
-                                         anchor="nw",
-                                         fill="white")
-        self.sm_sidebar.create_image(0,505,anchor=NW,image=self.photos)
-        self.sm_sidebar.create_text(70,
-                                         520,
-                                         text="Pictures"
-                                         , font=("Arial", 16),
-                                         anchor="nw",
-                                         fill="white")
-        self.sm_sidebar.create_image(0,555,anchor=NW,image=self.settings)
-        self.sm_sidebar.create_text(70,
-                                         570,
-                                         text="Settings"
-                                         , font=("Arial", 16),
-                                         anchor="nw",
-                                         fill="white")
-        self.sm_sidebar.create_image(0,605,anchor=NW,image=self.power)
-        self.sm_sidebar.create_text(70,
-                                         620,
-                                         text="Power"
-                                         , font=("Arial", 16),
-                                         anchor="nw",
-                                         fill="white")
-
-        return
-    def srtmenu_sidebar_call(self, event):
-        if self.side_bar_active:
-            self.start_menu_left()
-        else:
-            if self.side_bar_initialized:
-                self.start_menu_right()
-    def start_button_menu_call(self, event):
-        if self.show_start_menu == False:
-            if self.side_bar_active:
-                self.start_menu_left()
-            self.side_bar_initialized = False
-            self.start_menu_down()
-            self.show_start_menu = True
-        else:
-            self.start_menu_up(self.monitor_height)
-            self.show_start_menu = False
-
-    def start_menu_right(self, t=60):
-        self.sm_sidebar.configure(width=t)
-        if t > 300:
-            self.side_bar_active = True
-            #print(self.side_bar_active)
-            return
-        window.after(1, self.start_menu_right, t+5)
-    def start_menu_left(self, t=300):
-        if self.side_bar_active:
-            self.sm_sidebar.configure(width=t)
-            if t < 60:
-                self.side_bar_active = False
-                #print(self.side_bar_active)
-                return
-        window.after(1, self.start_menu_left, t-5)
-    
-        #t = 76 for laptops
-
-    def start_menu_down(self, t=390):
-        self.start_menu.place(x=0, y=t)
-        if t > variables.monitor_height:
-            return
-        window.after(1, self.start_menu_down, t+5)
-
-        #t = 771 for laptops
-    def start_menu_up(self, t):
-        self.start_menu.place(x=0, y=t)
-        if t < self.monitor_height-690:
-            self.side_bar_initialized = True
-            return
-        window.after(1, self.start_menu_up, t-5)
 
     def new_folder(self):
         icon_y = self.menu_y
@@ -899,8 +749,8 @@ if __name__ == "__main__":
     variables = Variables()
     if not os.path.exists(f"{variables.current_directory}\\Users"):
         os.mkdir(f"{variables.current_directory}\\Users")
-    os.system('taskkill /f /im explorer.exe')
-    atexit.register(exit_handler)
+    #os.system('taskkill /f /im explorer.exe')
+    #atexit.register(exit_handler)
     window = App()
     signup_screen = Signup_screen(window)
     window.mainloop()
