@@ -18,7 +18,12 @@ pip install screeninfo
 
 ## Getting Started
 
-Clone this repository and run
+Clone this repository
+```
+git clone https://github.com/IcyDiamond/PythonDesktop-Files.git
+```
+
+and run
 ```
 python PythonDesktop.py
 ```
