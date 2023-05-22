@@ -517,7 +517,7 @@ class Desktop_screen():
 
         os.makedirs(f"{variables.users}\\{Auth.username}\\desktop\\{files}")
 
-        self.image = self.desktop.create_image(icon_x, icon_y, image=self.folders)
+        self.image = self.desktop.create_image(icon_x, icon_y, image=self.folders, tags=files.replace(' ', '/'))
         self.img_ref.append(self.icon_photo)
         self.img_ref.append(self.folders)
         text = self.desktop.create_text(icon_x,
@@ -525,6 +525,8 @@ class Desktop_screen():
                                         text=files[:15] + "..." if len(files) > 15 else files,
                                         anchor="n", font=("Arial", 11))
         self.text_ref.append(text)
+        image_id = len(self.icon_dict)+1
+        self.icon_dict[files.replace(' ', '/')] = (icon_x, icon_y)
         
         x = int(icon_x/100)*100
         y = int(icon_y/100)*100
@@ -636,11 +638,9 @@ class Desktop_screen():
         for files in os.listdir(variables.desktop_list):
             file_path = os.path.join(variables.desktop_list, files)
 
-            image_id = "image_" + str(self.icon_id)
-
-            if image_id in self.icon_dict:
+            if files.replace(' ', '/') in self.icon_dict:
                 # If the image already has a location in the dictionary, use that location
-                icon_x, icon_y = self.icon_dict[image_id]
+                icon_x, icon_y = self.icon_dict[files.replace(' ', '/')]
             else:
                 # If the image doesn't have a location in the dictionary, find the next available grid cell
                 while self.icon_dict.get("cell_" + str(icon_x) + "_" + str(icon_y)):
@@ -648,13 +648,12 @@ class Desktop_screen():
                     if icon_y > self.icon_max:
                         icon_y = -50-(self.add*2)
                         icon_x += self.icon_numsize
-                self.icon_dict[image_id] = (icon_x, icon_y)
-                self.icon_dict["cell_" + str(icon_x) + "_" + str(icon_y)] = image_id
-
+                self.icon_dict[files.replace(' ', '/')] = (icon_x, icon_y)
+            
             if os.path.isdir(file_path):
-                self.image = self.desktop.create_image(icon_x, icon_y, image=self.folders, tags=image_id)
+                self.image = self.desktop.create_image(icon_x, icon_y, image=self.folders, tags=files.replace(' ', '/'))
             else:
-                self.image = self.desktop.create_image(icon_x, icon_y, image=self.icon_photo, tags=image_id)
+                self.image = self.desktop.create_image(icon_x, icon_y, image=self.icon_photo, tags=files.replace(' ', '/'))
 
             self.icon_id += 1
 
@@ -691,13 +690,15 @@ class Desktop_screen():
 
     def on_img_rename(self, event, text, file_name):
         self.rename_text_box = tk.Entry(window)
-        self.rename_text_box.bind('<Return>', lambda event, txt=text, file=file_name: self.update(event, txt, file))
+        self.rename_text_box.bind('<Return>', lambda event, txt=text, file=file_name: self.update_icon_name(event, txt, file))
         self.desktop.create_window(event.x, event.y, window=self.rename_text_box, tag='entry')
 
-    def update(self, event, text, file_name):
+    def update_icon_name(self, event, text, file_name):
         self.desktop.delete('entry')
         self.desktop.itemconfig(text, text=self.rename_text_box.get())
+        self.desktop.itemconfig(file_name, tag=self.rename_text_box.get().replace(' ', '/'))
         os.rename(f"{variables.desktop_list}\\{file_name}", f"{variables.desktop_list}\\{self.rename_text_box.get()}")
+        del self.icon_dict[file_name.replace(' ', '/')]
         
     # function to handle the move event
     def on_image_move(self, event, img, txt):
