@@ -402,6 +402,8 @@ class Desktop_screen():
 
         #icons
         initialized = False
+        self.icon_size_var_set = 'medium'
+        
         self.icon_size(self.max, self.size, self.height, self.add, initialized)
         
         #----------------------------------------Work in progress (context menu)--------------------------------------------------------------------
@@ -412,24 +414,25 @@ class Desktop_screen():
         self.desktop_submenu = tk.Menu(self.master.desktop_frame, tearoff=0)
 
         #view sub menu
-        self.large_icons_var = tk.BooleanVar()
         self.view_icons_var = tk.BooleanVar()
         self.align_grid_var = tk.BooleanVar()
-        self.large_icons_var.set(True)
+        self.icon_size_var = tk.StringVar()
+        self.icon_size_var.set("medium")
         self.align_grid_var.set(True)
         self.view_icons_var.set(True)#                                                          max 600 for laptops
-        self.desktop_submenu.add_checkbutton(label="Large icons", command=lambda: self.icon_size(800,140,80,10, False))
-        self.desktop_submenu.add_checkbutton(label="Medium icons", command=lambda: self.icon_size(900,100,50,0, False))
-        self.desktop_submenu.add_checkbutton(label="Small icons", command=lambda: self.icon_size(900,50,35,-10, False))
+        self.desktop_submenu.add_radiobutton(label="Large icons", variable=self.icon_size_var,
+                                             value="large", command=self.set_icon_size)
+        self.desktop_submenu.add_radiobutton(label="Medium icons", variable=self.icon_size_var,
+                                             value="medium", command=self.set_icon_size)
+        self.desktop_submenu.add_radiobutton(label="Small icons", variable=self.icon_size_var,
+                                             value="small", command=self.set_icon_size)
         self.desktop_submenu.add_separator()
         self.desktop_submenu.add_command(label="Auto Arrange icons")
         self.desktop_submenu.add_checkbutton(label="Align icons to grid", command=self.align_grid)
         self.desktop_submenu.add_separator()
         self.desktop_submenu.add_checkbutton(label="Show desktop icons", command=self.veiw_icons)
-        self.desktop_submenu.entryconfigure("Large icons",  variable=self.large_icons_var)
         self.desktop_submenu.entryconfigure("Align icons to grid",  variable=self.align_grid_var)
         self.desktop_submenu.entryconfigure("Show desktop icons",  variable=self.view_icons_var)
-
 
         #main menu
         self.desktop_menu.add_cascade(label='View', menu=self.desktop_submenu)
@@ -490,6 +493,20 @@ class Desktop_screen():
         self.icon_menu.add_command(label="Rename")
         self.icon_menu.add_separator()
         self.icon_menu.add_command(label="Properties")
+
+    def set_icon_size(self):
+        # Get the selected icon size
+        icon_size = self.icon_size_var.get()
+
+        if icon_size == "large":
+            self.icon_size(800, 140, 80, 10, False)
+            self.icon_size_var_set = 'large'
+        elif icon_size == "medium":
+            self.icon_size(900, 100, 50, 0, False)
+            self.icon_size_var_set = 'medium'
+        elif icon_size == "small":
+            self.icon_size(900, 50, 35, -10, False)
+            self.icon_size_var_set = 'small'
 
     def new_folder(self):
         icon_y = self.menu_y
@@ -555,12 +572,68 @@ class Desktop_screen():
         if height == 80:
             self.icon_photo = PhotoImage(file=os.path.join(variables.icon_images, "UnknownIcon_Large.png"))
             self.folders = PhotoImage(file=os.path.join(variables.icon_images, "Folder_large.png"))
+
+            if initialized:
+                return
+            
+            if self.icon_size_var_set == 'large':
+                pass
+            if self.icon_size_var_set == 'medium':
+                for i in self.icon_dict:
+                    icon_x, icon_y = self.icon_dict[i]
+                    icon_x = round(icon_x * 1.4)
+                    icon_y = round(icon_y * 1.4)
+                    self.icon_dict[i] = (icon_x, icon_y)
+            if self.icon_size_var_set == 'small':
+                for i in self.icon_dict:
+                    icon_x, icon_y = self.icon_dict[i]
+                    icon_x = round(icon_x * 2.8)
+                    icon_y = round(icon_y * 2.8)
+                    self.icon_dict[i] = (icon_x, icon_y)
+                
         if height == 50:
             self.icon_photo = PhotoImage(file=os.path.join(variables.icon_images, "UnknownIcon_Medium.png"))
             self.folders = PhotoImage(file=os.path.join(variables.icon_images, "Folder_medium.png"))
+            if initialized:
+                return
+            if self.icon_size_var_set == 'large':
+                for i in self.icon_dict:
+                    icon_x, icon_y = self.icon_dict[i]
+                    icon_x = round(icon_x / 1.4)
+                    icon_y = round(icon_y / 1.4)
+                    self.icon_dict[i] = (icon_x, icon_y)
+            if self.icon_size_var_set == 'medium':
+                pass
+            if self.icon_size_var_set == 'small':
+                for i in self.icon_dict:
+                    icon_x, icon_y = self.icon_dict[i]
+                    icon_x = round(icon_x * 1.4)
+                    icon_y = round(icon_y * 1.4)
+                    self.icon_dict[i] = (icon_x, icon_y)
         if height == 35:
             self.icon_photo = PhotoImage(file=os.path.join(variables.icon_images, "UnknownIcon_Medium.png"))
             self.folders = ImageTk.PhotoImage(Image.open(os.path.join(variables.icon_images, "Folder_medium.png")))
+            if initialized:
+                return
+            if self.icon_size_var_set == 'large':
+                for i in self.icon_dict:
+                    icon_x, icon_y = self.icon_dict[i]
+                    icon_x = round(icon_x / 2.8)
+                    icon_y = round(icon_y / 2.8)
+                    self.icon_dict[i] = (icon_x, icon_y)
+            if self.icon_size_var_set == 'medium':
+                for i in self.icon_dict:
+                    icon_x, icon_y = self.icon_dict[i]
+                    icon_x = round(icon_x / 1.4)
+                    icon_y = round(icon_y / 1.4)
+                    self.icon_dict[i] = (icon_x, icon_y)
+            if self.icon_size_var_set == 'small':
+                pass
+
+        if not self.icon_dict == {}:
+            with open(f"{variables.users}\\{Auth.username}\\icon_position.json", "w") as file:
+                json.dump(self.icon_dict, file)
+
         self.icon_height = height
         if not initialized:
             self.place_icons()
@@ -582,8 +655,12 @@ class Desktop_screen():
         size = self.icon_numsize
         height = self.height
         add = self.add
-        initialized = True
-        self.icon_size(max, size, height, add, initialized)
+        try:
+            with open(f"{variables.users}\\{Auth.username}\\icon_position.json", "r") as file:
+                self.icon_dict = json.load(file)
+        except:
+            self.icon_dict = self.icon_dict
+        self.icon_size(max, size, height, add, True)
         
         for image in self.img_ref:
             self.desktop.delete(image)
@@ -595,12 +672,6 @@ class Desktop_screen():
         icon_x = self.icon_height-add
         self.img_ref = []
         self.text_ref = []
-
-        try:
-            with open(f"{variables.users}\\{Auth.username}\\icon_position.json", "r") as file:
-                self.icon_dict = json.load(file)
-        except:
-            self.icon_dict = self.icon_dict
 
         for files in os.listdir(variables.desktop_list):
             file_path = os.path.join(variables.desktop_list, files)
