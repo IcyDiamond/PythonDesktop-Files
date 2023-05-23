@@ -90,7 +90,7 @@ class Taskbar(tk.Tk):
         self.app.bind("<Enter>", self.enter)
         self.app.bind("<Leave>", self.leave)
         
-        #self.update_clock()
+        self.update_clock()
 
     def update_clock(self):
         if Settings.twentyfour_hour == True:

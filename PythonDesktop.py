@@ -372,8 +372,6 @@ class Desktop_screen():
         self.icon_id = 0
         self.monitor_height = variables.monitor_height
         
-        
-        
         self.max = 900
         self.size = 100
         self.height = 50
@@ -382,7 +380,6 @@ class Desktop_screen():
     def initialize_taskbar(self):
         self.new_window = tk.Toplevel(self.master)
         self.start = Taskbar(self.new_window)
-
 
     def initialize_obj(self):
         #clears any widgets
@@ -395,13 +392,6 @@ class Desktop_screen():
         self.initialize_taskbar()
 
         #wallpaper
-        self.start_icon = PhotoImage(file=os.path.join(variables.icon_images, "StartButton.png"))
-        self.menu = PhotoImage(file=os.path.join(variables.icon_images, "Menu.png"))
-        self.document = PhotoImage(file=os.path.join(variables.icon_images, "Document.png"))
-        self.account = PhotoImage(file=os.path.join(variables.icon_images, "DefaultProfileImage.png"))
-        self.photos = PhotoImage(file=os.path.join(variables.icon_images, "Images.png"))
-        self.settings = PhotoImage(file=os.path.join(variables.icon_images, "Options.png"))
-        self.power = PhotoImage(file=os.path.join(variables.icon_images, "Power.png"))
         self.icon_photo = PhotoImage(file=os.path.join(variables.icon_images, "UnknownIcon_Medium.png"))
         self.wallpaper = ImageTk.PhotoImage(Image.open(os.path.join(f"{variables.current_directory}\\Windows\\Web\\Wallpaper\\Wallpaper.jpg")))
         self.folders = ImageTk.PhotoImage(Image.open(os.path.join(variables.icon_images, "Folder_medium.png")))
@@ -501,7 +491,6 @@ class Desktop_screen():
         self.icon_menu.add_separator()
         self.icon_menu.add_command(label="Properties")
 
-
     def new_folder(self):
         icon_y = self.menu_y
         icon_x = self.menu_x
@@ -541,20 +530,6 @@ class Desktop_screen():
         self.desktop.tag_bind(self.image, "<B1-Motion>", lambda event, img=self.image, txt=text: self.on_image_move(event, img, txt))
         self.desktop.tag_bind(self.image, "<ButtonRelease-1>", lambda event, img=self.image, txt=text: self.on_image_release(event, img, txt))
 
-    def on_leave(self,e):
-        self.start_button['background'] = 'dark grey'
-
-    #hightlight buttons in taskbar when clicked
-    def on_enter(self, e):
-        self.start_button['background'] = 'grey'
-
-    def file_on_leave(self,e):
-        self.file_explorer['background'] = 'dark grey'
-
-    #hightlight buttons in taskbar when clicked
-    def file_on_enter(self, e):
-        self.file_explorer['background'] = 'grey'
-
     #sub menus
     def do_popup(self, event):
         self.menu_x = event.x_root
@@ -563,14 +538,6 @@ class Desktop_screen():
             self.desktop_menu.tk_popup(event.x_root, event.y_root)
         finally:
             self.desktop_menu.grab_release()
-
-    def srtmenu_popup(self, event):
-        self.menu_x = event.x_root
-        self.menu_y = event.y_root
-        try:
-            self.rc_start_menu.tk_popup(event.x_root, event.y_root)
-        finally:
-            self.rc_start_menu.grab_release()
 
     def icon_popup(self, event):
         self.menu_x = event.x_root
