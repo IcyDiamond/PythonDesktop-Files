@@ -640,14 +640,9 @@ class Desktop_screen():
         return
 
     def veiw_icons(self):
-        if self.view_icons_value != True:
-            self.view_icons_value=True
-            self.place_icons()
-        else:
-            self.view_icons_value=False
-            for button in self.desktop.winfo_children():
-                if isinstance(button, tk.Button):
-                    button.destroy()
+        item_ids = self.desktop.find_all()
+        for item_id in item_ids:
+            self.desktop.itemconfig(item_id, state=tk.HIDDEN)
 
     def place_icons(self):
         variables.refresh_var()
