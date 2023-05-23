@@ -469,7 +469,7 @@ class Desktop_screen():
         self.desktop_submenu.entryconfig("Auto Arrange icons", state="disabled")
         self.desktop_submenu.entryconfig("Align icons to grid", state="disabled")
 
-        self.desktop_submenu.entryconfig("Show desktop icons",  state="normal")
+        self.desktop_submenu.entryconfig("Show desktop icons",  state="disabled")
 
         self.desktop.bind("<Button-3>", self.do_popup)
 
