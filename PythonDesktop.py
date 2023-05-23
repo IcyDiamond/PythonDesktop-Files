@@ -533,6 +533,7 @@ class Desktop_screen():
         self.text_ref.append(text)
         image_id = len(self.icon_dict)+1
         self.icon_dict[files.replace(' ', '/')] = (icon_x, icon_y)
+        self.file_dump()
         
         x = int(icon_x/100)*100
         y = int(icon_y/100)*100
@@ -631,8 +632,7 @@ class Desktop_screen():
                 pass
 
         if not self.icon_dict == {}:
-            with open(f"{variables.users}\\{Auth.username}\\icon_position.json", "w") as file:
-                json.dump(self.icon_dict, file)
+            self.file_dump()
 
         self.icon_height = height
         if not initialized:
@@ -760,8 +760,12 @@ class Desktop_screen():
         # update location of the image in the dictionary
         image_id = self.desktop.gettags(img)[0]
         self.icon_dict[image_id] = (x+self.icon_numsize//2, y+self.icon_numsize//2)
+        self.file_dump()
+
+    def file_dump(self):
         with open(f"{variables.users}\\{Auth.username}\\icon_position.json", "w") as file:
             json.dump(self.icon_dict, file)
+        return
 
     def align_grid(self):
         if self.grid == True:
