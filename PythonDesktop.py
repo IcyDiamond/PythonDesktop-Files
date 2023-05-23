@@ -537,7 +537,7 @@ class Desktop_screen():
 
         self.desktop.tag_bind(self.image, "<Button-1>", lambda event, img=self.image, txt=text: self.on_image_press(event, img, txt))
         self.desktop.tag_bind(self.image, "<Button-3>", self.icon_popup)
-        self.desktop.tag_bind(text, "<Double-1>", lambda event, txt=text, file=files: self.on_img_rename(event, txt, file))
+        #self.desktop.tag_bind(text, "<Double-1>", lambda event, txt=text, file=files: self.on_img_rename(event, txt, file))
         self.desktop.tag_bind(self.image, "<B1-Motion>", lambda event, img=self.image, txt=text: self.on_image_move(event, img, txt))
         self.desktop.tag_bind(self.image, "<ButtonRelease-1>", lambda event, img=self.image, txt=text: self.on_image_release(event, img, txt))
 
@@ -698,7 +698,9 @@ class Desktop_screen():
         self.desktop.itemconfig(text, text=self.rename_text_box.get())
         self.desktop.itemconfig(file_name, tag=self.rename_text_box.get().replace(' ', '/'))
         os.rename(f"{variables.desktop_list}\\{file_name}", f"{variables.desktop_list}\\{self.rename_text_box.get()}")
+        icon_x, icon_y = self.icon_dict[file_name.replace(' ', '/')]
         del self.icon_dict[file_name.replace(' ', '/')]
+        self.icon_dict[self.rename_text_box.get().replace(' ', '/')] = icon_x, icon_y
         
     # function to handle the move event
     def on_image_move(self, event, img, txt):
