@@ -464,7 +464,7 @@ class Desktop_screen():
 
         self.desktop_submenu.entryconfig("Large icons", state="normal")
         self.desktop_submenu.entryconfig("Medium icons", state="normal")
-        self.desktop_submenu.entryconfig("Small icons", state="disabled")
+        self.desktop_submenu.entryconfig("Small icons", state="normal")
 
         self.desktop_submenu.entryconfig("Auto Arrange icons", state="disabled")
         self.desktop_submenu.entryconfig("Align icons to grid", state="normal")
@@ -588,8 +588,8 @@ class Desktop_screen():
             if self.icon_size_var_set == 'small':
                 for i in self.icon_dict:
                     icon_x, icon_y = self.icon_dict[i]
-                    icon_x = round(icon_x * 2.8)
-                    icon_y = round(icon_y * 2.8)
+                    icon_x = round(icon_x * 1.96)
+                    icon_y = round(icon_y * 1.96)
                     self.icon_dict[i] = (icon_x, icon_y)
                 
         if height == 50:
@@ -619,8 +619,8 @@ class Desktop_screen():
             if self.icon_size_var_set == 'large':
                 for i in self.icon_dict:
                     icon_x, icon_y = self.icon_dict[i]
-                    icon_x = round(icon_x / 2.8)
-                    icon_y = round(icon_y / 2.8)
+                    icon_x = round(icon_x / 1.96)
+                    icon_y = round(icon_y / 1.96)
                     self.icon_dict[i] = (icon_x, icon_y)
             if self.icon_size_var_set == 'medium':
                 for i in self.icon_dict:
