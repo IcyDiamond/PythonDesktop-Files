@@ -467,9 +467,9 @@ class Desktop_screen():
         self.desktop_submenu.entryconfig("Small icons", state="disabled")
 
         self.desktop_submenu.entryconfig("Auto Arrange icons", state="disabled")
-        self.desktop_submenu.entryconfig("Align icons to grid", state="disabled")
+        self.desktop_submenu.entryconfig("Align icons to grid", state="normal")
 
-        self.desktop_submenu.entryconfig("Show desktop icons",  state="disabled")
+        self.desktop_submenu.entryconfig("Show desktop icons",  state="normal")
 
         self.desktop.bind("<Button-3>", self.do_popup)
 
@@ -640,9 +640,22 @@ class Desktop_screen():
         return
 
     def veiw_icons(self):
-        item_ids = self.desktop.find_all()
-        for item_id in item_ids:
-            self.desktop.itemconfig(item_id, state=tk.HIDDEN)
+        if self.view_icons_value != True:
+            self.view_icons_value=True
+            item_ids = self.desktop.find_all()
+            for item_id in item_ids:
+                try:
+                    self.desktop.itemconfig(item_id, state=tk.NORMAL)
+                except tk.TclError as e:
+                    pass
+        else:
+            self.view_icons_value=False
+            item_ids = self.desktop.find_all()
+            for item_id in item_ids:
+                try:
+                    self.desktop.itemconfig(item_id, state=tk.HIDDEN)
+                except tk.TclError as e:
+                    pass
 
     def place_icons(self):
         variables.refresh_var()
@@ -683,10 +696,17 @@ class Desktop_screen():
                         icon_x += self.icon_numsize
                 self.icon_dict[files.replace(' ', '/')] = (icon_x, icon_y)
             
+            if self.view_icons_value == False:
+                view = tk.HIDDEN
+            else:
+                view = tk.NORMAL
+
             if os.path.isdir(file_path):
                 self.image = self.desktop.create_image(icon_x, icon_y, image=self.folders, tags=files.replace(' ', '/'))
             else:
                 self.image = self.desktop.create_image(icon_x, icon_y, image=self.icon_photo, tags=files.replace(' ', '/'))
+
+            self.desktop.itemconfig(self.image, state=view)
 
             self.icon_id += 1
 
@@ -697,6 +717,9 @@ class Desktop_screen():
                                         icon_y + 30 + (self.add*2+self.add//2),
                                         text=files[:15] + "..." if len(files) > 15 else files,
                                         anchor="n", font=("Arial", 11))
+            
+            self.desktop.itemconfig(text, state=view)
+
             self.text_ref.append(text)
             
             self.desktop.tag_bind(self.image, "<Button-1>", lambda event, img=self.image, txt=text: self.on_image_press(event, img, txt))
@@ -772,18 +795,7 @@ class Desktop_screen():
             self.grid=False
         else:
             self.grid=True
-            for button in self.desktop.winfo_children():
-                if isinstance(button, tk.Canvas):
-                    x = ((button.winfo_x()/100)*100)
-                    y = ((button.winfo_y() + self.icon_numsize//2) // self.icon_numsize) * self.icon_numsize
-
-                    # check if there is already a button at this position
-                    for existing_button in self.desktop.winfo_children():
-                        if isinstance(existing_button, tk.Button) and existing_button != button:
-                            if existing_button.winfo_x() == x and existing_button.winfo_y() == y:
-                                self.file_icon.place(x=existing_button.winfo_x()+self.icon_numsize, y=existing_button.winfo_y()+self.icon_numsize)
-                                return
-                    button.place_configure(x=x,y=y)
+        print(self.desktop.winfo_children())
 
 if __name__ == "__main__":
     variables = Variables()
