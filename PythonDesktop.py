@@ -760,9 +760,6 @@ class Desktop_screen():
         
     # function to handle the move event
     def on_image_move(self, event, img, txt):
-        image_id = self.desktop.gettags(img)[0]
-        location = self.icon_dict[image_id]
-
         if self.selected_img == img:
             x, y = (event.x - self.desktop.x), (event.y - self.desktop.y)
             self.desktop.move(self.selected_img, x, y)
@@ -776,13 +773,18 @@ class Desktop_screen():
         x = int(event.x/self.icon_numsize)*self.icon_numsize
         y = int(event.y/self.icon_numsize)*self.icon_numsize
         if self.grid == False:
-            return
-        self.desktop.coords(img, x+self.icon_numsize//2, y+self.icon_numsize//2)
-        self.desktop.coords(txt, x+self.icon_numsize//2, y+self.height+self.height//2+5 )
+            x, y = self.desktop.coords(img)
+            x, y = round(x), round(y)
+        else:
+            self.desktop.coords(img, x+self.icon_numsize//2, y+self.icon_numsize//2)
+            self.desktop.coords(txt, x+self.icon_numsize//2, y+self.height+self.height//2+5)
 
         # update location of the image in the dictionary
         image_id = self.desktop.gettags(img)[0]
-        self.icon_dict[image_id] = (x+self.icon_numsize//2, y+self.icon_numsize//2)
+        if self.grid == False:
+            self.icon_dict[image_id] = (x, y)
+        else:
+            self.icon_dict[image_id] = (x+self.icon_numsize//2, y+self.icon_numsize//2)
         self.file_dump()
 
     def file_dump(self):
@@ -795,7 +797,7 @@ class Desktop_screen():
             self.grid=False
         else:
             self.grid=True
-        print(self.desktop.winfo_children())
+        item_ids = self.desktop.winfo_children()
 
 if __name__ == "__main__":
     variables = Variables()
