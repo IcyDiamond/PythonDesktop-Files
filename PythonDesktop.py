@@ -796,6 +796,7 @@ class Desktop_screen():
             self.grid=False
         else:
             self.grid=True
+            print('test')
 
 if __name__ == "__main__":
     variables = Variables()
