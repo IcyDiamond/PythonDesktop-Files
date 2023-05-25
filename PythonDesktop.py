@@ -354,6 +354,7 @@ class Signup_screen():
 class Desktop_screen():
     def __init__(self, master):
         self.master = master
+        self.icons = []
         self.img_ref = []
         self.text_ref = []
         self.icon_dict = {}
@@ -467,7 +468,7 @@ class Desktop_screen():
         self.desktop_submenu.entryconfig("Small icons", state="normal")
 
         self.desktop_submenu.entryconfig("Auto Arrange icons", state="disabled")
-        self.desktop_submenu.entryconfig("Align icons to grid", state="normal")
+        self.desktop_submenu.entryconfig("Align icons to grid", state="disabled")
 
         self.desktop_submenu.entryconfig("Show desktop icons",  state="normal")
 
@@ -642,20 +643,18 @@ class Desktop_screen():
     def veiw_icons(self):
         if self.view_icons_value != True:
             self.view_icons_value=True
-            item_ids = self.desktop.find_all()
-            for item_id in item_ids:
+            for img in self.icons:
                 try:
-                    self.desktop.itemconfig(item_id, state=tk.NORMAL)
-                except tk.TclError as e:
-                    pass
+                    self.desktop.itemconfig(img, state=tk.NORMAL)
+                except tk.TclError:
+                    self.icons.remove(img)
         else:
             self.view_icons_value=False
-            item_ids = self.desktop.find_all()
-            for item_id in item_ids:
+            for img in self.icons:
                 try:
-                    self.desktop.itemconfig(item_id, state=tk.HIDDEN)
-                except tk.TclError as e:
-                    pass
+                    self.desktop.itemconfig(img, state=tk.HIDDEN)
+                except tk.TclError:
+                    self.icons.remove(img)
 
     def place_icons(self):
         variables.refresh_var()
@@ -710,9 +709,6 @@ class Desktop_screen():
 
             self.icon_id += 1
 
-            self.img_ref.append(self.icon_photo)
-            self.img_ref.append(self.folders)
-
             text = self.desktop.create_text(icon_x,
                                         icon_y + 30 + (self.add*2+self.add//2),
                                         text=files[:15] + "..." if len(files) > 15 else files,
@@ -720,6 +716,10 @@ class Desktop_screen():
             
             self.desktop.itemconfig(text, state=view)
 
+            self.img_ref.append(self.icon_photo)
+            self.img_ref.append(self.folders)
+            self.icons.append(self.image)
+            self.icons.append(text)
             self.text_ref.append(text)
             
             self.desktop.tag_bind(self.image, "<Button-1>", lambda event, img=self.image, txt=text: self.on_image_press(event, img, txt))
@@ -727,7 +727,6 @@ class Desktop_screen():
             self.desktop.tag_bind(text, "<Double-1>", lambda event, txt=text, file=files: self.on_img_rename(event, txt, file))
             self.desktop.tag_bind(self.image, "<B1-Motion>", lambda event, img=self.image, txt=text: self.on_image_move(event, img, txt))
             self.desktop.tag_bind(self.image, "<ButtonRelease-1>", lambda event, img=self.image, txt=text: self.on_image_release(event, img, txt))
-
 
             if icon_y > self.icon_max:
                 icon_y = -50-(self.add*2)
@@ -797,7 +796,6 @@ class Desktop_screen():
             self.grid=False
         else:
             self.grid=True
-        item_ids = self.desktop.winfo_children()
 
 if __name__ == "__main__":
     variables = Variables()
