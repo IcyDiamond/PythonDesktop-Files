@@ -524,17 +524,26 @@ class Desktop_screen():
 
         os.makedirs(f"{variables.users}\\{Auth.username}\\desktop\\{files}")
 
+        if self.view_icons_value == False:
+            view = tk.HIDDEN
+        else:
+            view = tk.NORMAL
+
         self.image = self.desktop.create_image(icon_x, icon_y, image=self.folders, tags=files.replace(' ', '/'))
-        self.img_ref.append(self.icon_photo)
-        self.img_ref.append(self.folders)
         text = self.desktop.create_text(icon_x,
                                         icon_y + 30,
                                         text=files[:15] + "..." if len(files) > 15 else files,
                                         anchor="n", font=("Arial", 11))
-        self.text_ref.append(text)
-        image_id = len(self.icon_dict)+1
+        self.desktop.itemconfig(self.image, state=view)
+        self.desktop.itemconfig(text, state=view)
         self.icon_dict[files.replace(' ', '/')] = (icon_x, icon_y)
+
         self.file_dump()
+        self.img_ref.append(self.icon_photo)
+        self.img_ref.append(self.folders)
+        self.text_ref.append(text)
+        self.icons.append(self.image)
+        self.icons.append(text)
         
         x = int(icon_x/100)*100
         y = int(icon_y/100)*100
@@ -662,12 +671,16 @@ class Desktop_screen():
         size = self.icon_numsize
         height = self.height
         add = self.add
+        icon_y = self.icon_height-add
+        icon_x = self.icon_height-add
+        self.img_ref = []
+        self.text_ref = []
+
         try:
             with open(f"{variables.users}\\{Auth.username}\\icon_position.json", "r") as file:
                 self.icon_dict = json.load(file)
         except:
             self.icon_dict = self.icon_dict
-        self.icon_size(max, size, height, add, True)
         
         for image in self.img_ref:
             self.desktop.delete(image)
@@ -675,10 +688,7 @@ class Desktop_screen():
         for text in self.text_ref:
             self.desktop.delete(text)
 
-        icon_y = self.icon_height-add
-        icon_x = self.icon_height-add
-        self.img_ref = []
-        self.text_ref = []
+        self.icon_size(max, size, height, add, True)
 
         for files in os.listdir(variables.desktop_list):
             file_path = os.path.join(variables.desktop_list, files)
@@ -728,6 +738,7 @@ class Desktop_screen():
             self.desktop.tag_bind(self.image, "<B1-Motion>", lambda event, img=self.image, txt=text: self.on_image_move(event, img, txt))
             self.desktop.tag_bind(self.image, "<ButtonRelease-1>", lambda event, img=self.image, txt=text: self.on_image_release(event, img, txt))
 
+            #find the next available spot 
             if icon_y > self.icon_max:
                 icon_y = -50-(self.add*2)
                 icon_x += self.icon_numsize
