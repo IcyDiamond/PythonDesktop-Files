@@ -673,8 +673,6 @@ class Desktop_screen():
         add = self.add
         icon_y = self.icon_height-add
         icon_x = self.icon_height-add
-        self.img_ref = []
-        self.text_ref = []
 
         try:
             with open(f"{variables.users}\\{Auth.username}\\icon_position.json", "r") as file:
@@ -688,6 +686,8 @@ class Desktop_screen():
         for text in self.text_ref:
             self.desktop.delete(text)
 
+        self.img_ref = []
+        self.text_ref = []
         self.icon_size(max, size, height, add, True)
 
         for files in os.listdir(variables.desktop_list):
