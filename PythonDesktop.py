@@ -623,7 +623,7 @@ class Desktop_screen():
                     self.icon_dict[i] = (icon_x, icon_y)
         if height == 35:
             self.icon_photo = PhotoImage(file=os.path.join(variables.icon_images, "UnknownIcon_Medium.png"))
-            self.folders = ImageTk.PhotoImage(Image.open(os.path.join(variables.icon_images, "Folder_medium.png")))
+            self.folders = ImageTk.PhotoImage(Image.open(os.path.join(variables.icon_images, "Folder_small.png")))
             if initialized:
                 return
             if self.icon_size_var_set == 'large':
