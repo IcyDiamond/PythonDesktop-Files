@@ -1,3 +1,6 @@
 screeninfo
 pillow
 tkinter
+pygetwindow
+BlurWindow
+screeninfo
