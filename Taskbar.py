@@ -1,13 +1,15 @@
 from BlurWindow.blurWindow import blur
 from screeninfo import get_monitors
+from functools import partial
 from PIL import Image,ImageTk
-from menu import Startmenu
 from settings import Settings
+from menu import Startmenu
 from ctypes import windll
+import pygetwindow as gw
 import tkinter as tk
-import time
 import ctypes
 import atexit
+import time
 import os
 
 # get the handle to the taskbar
@@ -19,6 +21,47 @@ windll.user32.ShowWindow(h, 0)
 @atexit.register
 def set_show_state():
     ctypes.windll.user32.ShowWindow(h, 9)
+
+def toggle_app(selected_app, event=None):
+    window = gw.getWindowsWithTitle(selected_app)[0]
+    if window.isMaximized:
+        window.minimize()
+    else:
+        window.maximize()
+        window.activate()
+
+class ToolTip:
+    def __init__(self, app, widget, text):
+        self.app = app
+        self.widget = widget
+        self.text = text
+        self.tooltip = None
+        self.monitors = get_monitors()
+        for i in range(len(self.monitors)):
+            if self.monitors[i].is_primary == False:
+                pass
+            else:
+                self.monitor_width = self.monitors[i].width
+                self.monitor_height = self.monitors[i].height
+        self.app.taskbar.tag_bind(widget, "<Enter>", self.enter)
+        self.app.taskbar.tag_bind(widget,"<Leave>", self.leave)
+        self.app.taskbar.tag_bind(widget, "<Button-1>", lambda event, app=text: toggle_app(app))
+
+
+    def enter(self, event):
+        x = event.x
+        y = event.y
+
+        self.tooltip = tk.Toplevel()
+        self.tooltip.wm_overrideredirect(True)
+        self.tooltip.wm_geometry(f"+{x-25}+{self.monitor_height-60}")
+
+        label = tk.Label(self.tooltip, text=self.text, background="#ffffe0", relief="solid", borderwidth=1)
+        label.pack()
+
+    def leave(self, _):
+        if self.tooltip:
+            self.tooltip.destroy()
 
 class Taskbar(tk.Tk):
     def __init__(self,app):
@@ -82,9 +125,20 @@ class Taskbar(tk.Tk):
         images_dir = os.path.dirname(os.path.abspath(__file__))
         images_dir = os.path.join(f"{images_dir}\\assets")
         self.img= ImageTk.PhotoImage(Image.open(os.path.join(f"{images_dir}\\StartButton.png")))
+        self.app_icon= ImageTk.PhotoImage(Image.open(os.path.join(f"{images_dir}\\GenericApp.png")))
+
+        open_apps = []
+        for window in gw.getAllTitles():
+            if window.strip() and gw.getWindowsWithTitle(window):
+                open_apps.append(window)
         
         start_button = self.app.taskbar.create_image(0, 0, anchor="nw", image=self.img)
         self.clock = self.app.taskbar.create_text(self.monitor_width-120, 0, text="00:00", anchor="nw",fill = "white", font=('Arial', 11, 'bold'))
+        space = 50
+        for app in open_apps:
+            taskbar_app = self.app.taskbar.create_image(space, 0, anchor="nw", image=self.app_icon)
+            space +=50
+            ToolTip(self.app, taskbar_app, app)
 
         self.app.taskbar.tag_bind(start_button, "<Button-1>", self.app.start.call)
         self.app.bind("<Enter>", self.enter)
