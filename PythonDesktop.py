@@ -39,7 +39,7 @@ class App(tk.Tk):
         self.signin_frame.grid_propagate(0)
         self.signup_frame.grid_propagate(0)
         self.desktop_frame.grid_propagate(0)
-        self.signin_screen = signin_screen(self)
+        self.signin_screen = Signin_screen(self)
 
 class Variables:
     def __init__(self):
@@ -85,13 +85,14 @@ class Auth:
     confirm_password_input_value = True
 
 #signin screen
-class signin_screen:
+class Signin_screen:
     def __init__(self, master):
         self.master = master
         self.initialized = False
-        self.initialize_obj()
+        self.initialize_object()
 
-    def initialize_obj(self):
+    #Set up the window with the widgets
+    def initialize_object(self):
         if not self.initialized:
             #places the signin frame
             self.master.signin_frame.pack()
@@ -159,7 +160,7 @@ class signin_screen:
         self.username_input_value = True
         self.password_input_value = True
         self.desktop = Desktop_screen(self.master)
-        self.desktop.initialize_obj()
+        self.desktop.initialize_object()
     
     def stored_check(self):
         if Auth.username_stored_value == True:
@@ -181,7 +182,7 @@ class signin_screen:
         Auth.confirm_password_input_value = True
 
         self.signup_screen = Signup_screen(self.master)
-        self.signup_screen.initialize_obj()
+        self.signup_screen.initialize_object()
         
     #if the field is emtpy it puts the text "password"
     def password_out(self,e):
@@ -209,11 +210,11 @@ class signin_screen:
             self.username_input.delete(0, "end")
             Auth.username_input_value = False
 
-class Signup_screen():
+class Signup_screen:
     def __init__(self, master):
         self.master = master        
 
-    def initialize_obj(self):
+    def initialize_object(self):
         self.master.signup_frame.pack()
         
         #clears any widgets
@@ -288,7 +289,7 @@ class Signup_screen():
         os.mkdir(f"{variables.users}\\{Auth.username}\\desktop")
 
         messagebox.showinfo("Success","signup successful!")
-        self.master.signin_screen = signin_screen(self.master)
+        self.master.signin_screen = Signin_screen(self.master)
 
     def stored_check(self):
         if Auth.username_stored_value == True:
@@ -308,8 +309,8 @@ class Signup_screen():
         Auth.password_input_value = True
         Auth.confirm_password_input_value = True
 
-        self.master.signin_screen = signin_screen(self.master)
-        self.master.signin_screen.initialize_obj()
+        self.master.signin_screen = Signin_screen(self.master)
+        self.master.signin_screen.initialize_object()
 
     #if the username is emtpy or just spaces
     def username_out(self,e):
@@ -351,7 +352,7 @@ class Signup_screen():
             self.confirm_password_input.delete(0, "end")
             Auth.confirm_password_input_value = False
 
-class Desktop_screen():
+class Desktop_screen:
     def __init__(self, master):
         self.master = master
         self.icons = []
@@ -380,9 +381,13 @@ class Desktop_screen():
 
     def initialize_taskbar(self):
         self.new_window = tk.Toplevel(self.master)
-        self.start = Taskbar(self.new_window)
+        Taskbar(self.new_window)
 
-    def initialize_obj(self):
+    def refresh_taskbar(self):
+        self.new_window.destroy()
+        self.initialize_taskbar()
+
+    def initialize_object(self):
         #clears any widgets
         for widgets in self.master.signin_frame.winfo_children():
             widgets.destroy()

@@ -1,12 +1,13 @@
 from BlurWindow.blurWindow import blur
 from screeninfo import get_monitors
-from functools import partial
+from PIL import Image, ImageTk
 from PIL import Image,ImageTk
 from settings import Settings
 from menu import Startmenu
 from ctypes import windll
 import pygetwindow as gw
 import tkinter as tk
+import subprocess
 import ctypes
 import atexit
 import time
@@ -50,7 +51,6 @@ class ToolTip:
 
     def enter(self, event):
         x = event.x
-        y = event.y
 
         self.tooltip = tk.Toplevel()
         self.tooltip.wm_overrideredirect(True)
@@ -108,16 +108,9 @@ class Taskbar(tk.Tk):
         # Raise the parent window to the top of the window stack order
         self.app.lift()
 
-        self.obj()
+        self.initialize_icon()
 
-    def apply_blur(self):
-        if self.add_blur == False:
-            return
-        # Get the handle to the canvas window
-        hWnd = windll.user32.GetForegroundWindow()
-        blur(hWnd,hexColor="#1d1d1d",Acrylic=True,Dark=True)
-    
-    def obj(self):
+    def initialize_icon(self):
         self.app.taskbar = tk.Canvas(self.app, background='#1d1d1d', height=40, highlightthickness=0)
         self.app.taskbar.pack(expand="true",fill=tk.BOTH)
         
@@ -127,13 +120,27 @@ class Taskbar(tk.Tk):
         self.img= ImageTk.PhotoImage(Image.open(os.path.join(f"{images_dir}\\StartButton.png")))
         self.app_icon= ImageTk.PhotoImage(Image.open(os.path.join(f"{images_dir}\\GenericApp.png")))
 
-        open_apps = []
-        for window in gw.getAllTitles():
-            if window.strip() and gw.getWindowsWithTitle(window):
-                open_apps.append(window)
         
         start_button = self.app.taskbar.create_image(0, 0, anchor="nw", image=self.img)
         self.clock = self.app.taskbar.create_text(self.monitor_width-120, 0, text="00:00", anchor="nw",fill = "white", font=('Arial', 11, 'bold'))
+
+        """
+        This code retrieves a list of open applications and their main window titles using PowerShell. 
+        It then creates taskbar application icons for each open application and displays a tooltip 
+        with the application's main window title on hover.
+        """
+        command = r'powershell.exe "Get-Process | Where-Object { $_.MainWindowTitle -ne \"\" -and $_.ProcessName -ne \"Textinputhost\" } | Select-Object MainWindowTitle"'
+        output = subprocess.check_output(command, shell=True, encoding='utf-8')
+        lines = output.strip().split('\n')
+        app_list = [line.split() for line in lines]
+        open_apps = []
+
+        for app in app_list[2:]:
+            window = ' '.join(app[2:])
+            if window.strip():
+                open_apps.append(window)
+                
+
         space = 50
         for app in open_apps:
             taskbar_app = self.app.taskbar.create_image(space, 0, anchor="nw", image=self.app_icon)
@@ -197,7 +204,6 @@ class Taskbar(tk.Tk):
                 return
             self.app.geometry(f"+{t+1}+0")
             self.app.after(3, self.taskbar_show)
-
     def taskbar_hide(self):
         if self.app.start.menu_movement or self.app.start.menu_active:
             self.app.after(10, self.taskbar_hide)
@@ -246,6 +252,14 @@ class Taskbar(tk.Tk):
                 self.app.geometry(f"+{t-1}+0")
                 self.app.after(3, self.taskbar_hide)
             return
+        
+    def apply_blur(self):
+        if self.add_blur == False:
+            return
+        # Get the handle to the canvas window
+        hWnd = windll.user32.GetForegroundWindow()
+        blur(hWnd,hexColor="#1d1d1d",Acrylic=True,Dark=True)
+    
 
 if __name__ == "__main__":
     window = Taskbar()

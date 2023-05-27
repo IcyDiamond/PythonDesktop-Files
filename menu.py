@@ -1,7 +1,7 @@
 import tkinter as tk
 from screeninfo import get_monitors
 from pynput.mouse import Listener
-from settings import Settings
+from settings import Settings, Setting_Menu
 import threading
 import os
 
@@ -104,13 +104,16 @@ class Startmenu(tk.Tk):
         self.sidebar.tag_bind(pictures, "<Button-1>", lambda event=None: self.open_file(os.path.expanduser("~\\Pictures"),event))
         self.sidebar.tag_bind(pictures1, "<Button-1>", lambda event=None: self.open_file(os.path.expanduser("~\\Pictures"),event))
 
-        self.sidebar.create_image(0,555,anchor="nw",image=self.settings)
-        self.sidebar.create_text(70,
+        settings = self.sidebar.create_image(0,555,anchor="nw",image=self.settings)
+        settings1 = self.sidebar.create_text(70,
                                          570,
                                          text="Settings"
                                          , font=("Arial", 16),
                                          anchor="nw",
                                          fill="white")
+        self.sidebar.tag_bind(settings, "<Button-1>", self.setting_menu_call)
+        self.sidebar.tag_bind(settings1, "<Button-1>", self.setting_menu_call)
+
         self.sidebar.create_image(0,605,anchor="nw",image=self.power)
         self.sidebar.create_text(70,
                                          620,
@@ -118,6 +121,7 @@ class Startmenu(tk.Tk):
                                          , font=("Arial", 16),
                                          anchor="nw",
                                          fill="white")
+        
 
     def open_file(self, file, event=None):
         os.startfile(file)
@@ -295,3 +299,8 @@ class Startmenu(tk.Tk):
             if y < self.app.winfo_y() or x > self.app.winfo_x()+self.app.winfo_width():
                 if self.menu_active:
                     self.menu_hide()
+
+    def setting_menu_call(self, event=None):
+        new_window = tk.Toplevel(self.app)
+        start = Setting_Menu(new_window)
+        self.menu_hide()
