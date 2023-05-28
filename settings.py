@@ -2,7 +2,7 @@ import tkinter as tk
 
 class Settings:
     taskbar_hide = False
-    twentyfour_hour = True
+    twentyfour_hour = False
     taskbarsize = 40
     taskbar_location = "Bottom"
     menu_roundness = False
@@ -22,7 +22,7 @@ class Setting_Menu():
         
         # 24-Hour Format Checkbox
         self.twentyfour_hour_var = tk.BooleanVar()
-        self.twentyfour_hour_var.set(True)
+        self.twentyfour_hour_var.set(False)
         self.twentyfour_hour_checkbox = tk.Checkbutton(self.window, text="24-Hour Format", variable=self.twentyfour_hour_var)
         self.twentyfour_hour_checkbox.pack()
         

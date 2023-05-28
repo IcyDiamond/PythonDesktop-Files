@@ -8,10 +8,15 @@ from ctypes import windll
 import pygetwindow as gw
 import tkinter as tk
 import subprocess
+import win32gui
+import win32api
+import win32con
+import win32ui
 import ctypes
 import atexit
 import time
 import os
+import re
 
 # get the handle to the taskbar
 h = windll.user32.FindWindowA(b'Shell_TrayWnd', None)
@@ -31,12 +36,16 @@ def toggle_app(selected_app, event=None):
         window.maximize()
         window.activate()
 
+class Apps:
+    test = []
+
 class ToolTip:
     def __init__(self, app, widget, text):
         self.app = app
         self.widget = widget
         self.text = text
         self.tooltip = None
+        Apps.test.append(widget)
         self.monitors = get_monitors()
         for i in range(len(self.monitors)):
             if self.monitors[i].is_primary == False:
@@ -129,25 +138,80 @@ class Taskbar(tk.Tk):
         It then creates taskbar application icons for each open application and displays a tooltip 
         with the application's main window title on hover.
         """
-        command = r'powershell.exe "Get-Process | Where-Object { $_.MainWindowTitle -ne \"\" -and $_.ProcessName -ne \"Textinputhost\" } | Select-Object MainWindowTitle"'
+        command = r'powershell.exe "Get-Process | Where-Object { $_.MainWindowTitle -ne \"\" -and $_.ProcessName -ne \"Textinputhost\" } | Select-Object MainWindowTitle, Path"'
         output = subprocess.check_output(command, shell=True, encoding='utf-8')
         lines = output.strip().split('\n')
         app_list = [line.split() for line in lines]
-        open_apps = []
 
+        taskbar_running_apps = []
+        self.taskbar_icons = []
+
+        space = 0
         for app in app_list[2:]:
-            window = ' '.join(app[2:])
-            if window.strip():
-                open_apps.append(window)
-                
+            space += 50
+            path = None
+            rest = []
+            current_path = None
+            for item in app:
+                if re.match(r'^(?:[A-Za-z]:)?(?:\\[^\\/:*?"<>|\r\n]+)+$', item):
+                    if current_path:
+                        current_path += ' ' + item
+                    else:
+                        current_path = item
+                elif current_path:
+                    current_path += ' ' + item
+                else:
+                    rest.append(item)
+            if current_path:
+                path = current_path
+            name = ' '.join(rest) if rest else ''
+            ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
+            ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
 
-        space = 50
-        for app in open_apps:
-            taskbar_app = self.app.taskbar.create_image(space, 0, anchor="nw", image=self.app_icon)
-            space +=50
-            ToolTip(self.app, taskbar_app, app)
+            # Extract the large system icon
+            large, small = win32gui.ExtractIconEx(path, 0)
 
-        self.app.taskbar.tag_bind(start_button, "<Button-1>", self.app.start.call)
+            # Create a compatible device context
+            hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
+            hbmp = win32ui.CreateBitmap()
+            hbmp.CreateCompatibleBitmap(hdc, ico_x, ico_x)
+            hdc = hdc.CreateCompatibleDC()
+
+            hdc.SelectObject(hbmp)
+            hdc.DrawIcon((0, 0), large[0])
+
+            # Save the icon as a file
+            hbmp.SaveBitmapFile(hdc, 'icon.ico')
+
+            # Load the saved icon using PIL
+            icon_image = Image.open('icon.ico')
+
+            # Convert the image to RGBA format
+            icon_image = icon_image.convert("RGBA")
+
+            # Create a transparent mask by setting black pixels to transparent
+            data = icon_image.getdata()
+            new_data = []
+            for item in data:
+                # Set black pixels (RGB < 10) to transparent
+                if item[0] < 10 and item[1] < 10 and item[2] < 10:
+                    new_data.append((item[0], item[1], item[2], 0))  # Set alpha to 0 for black pixels
+                else:
+                    new_data.append(item)
+
+            # Update the image with the transparent mask
+            icon_image.putdata(new_data)
+
+            # Convert the image to Tkinter-compatible format
+            
+            taskbar_running_apps.append([name, icon_image])
+
+            tk_image = ImageTk.PhotoImage(icon_image)
+            self.taskbar_app = self.app.taskbar.create_image(space, 4, anchor="nw", image=tk_image)
+            self.app.taskbar.itemconfig(self.taskbar_app, state=tk.NORMAL)
+            self.taskbar_icons.append((tk_image,self.taskbar_app))
+            ToolTip(self.app, self.taskbar_app, name)
+
         self.app.bind("<Enter>", self.enter)
         self.app.bind("<Leave>", self.leave)
         
