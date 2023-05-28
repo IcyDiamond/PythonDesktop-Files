@@ -36,16 +36,12 @@ def toggle_app(selected_app, event=None):
         window.maximize()
         window.activate()
 
-class Apps:
-    test = []
-
 class ToolTip:
     def __init__(self, app, widget, text):
         self.app = app
         self.widget = widget
         self.text = text
         self.tooltip = None
-        Apps.test.append(widget)
         self.monitors = get_monitors()
         for i in range(len(self.monitors)):
             if self.monitors[i].is_primary == False:
@@ -54,21 +50,22 @@ class ToolTip:
                 self.monitor_width = self.monitors[i].width
                 self.monitor_height = self.monitors[i].height
         self.app.taskbar.tag_bind(widget, "<Enter>", self.enter)
-        self.app.taskbar.tag_bind(widget,"<Leave>", self.leave)
+        self.app.taskbar.tag_bind(widget, "<Leave>", self.leave)
         self.app.taskbar.tag_bind(widget, "<Button-1>", lambda event, app=text: toggle_app(app))
-
 
     def enter(self, event):
         x = event.x
-
         self.tooltip = tk.Toplevel()
         self.tooltip.wm_overrideredirect(True)
         self.tooltip.wm_geometry(f"+{x-25}+{self.monitor_height-60}")
-
         label = tk.Label(self.tooltip, text=self.text, background="#ffffe0", relief="solid", borderwidth=1)
         label.pack()
 
     def leave(self, _):
+        if self.tooltip:
+            self.tooltip.destroy()
+
+    def __del__(self):
         if self.tooltip:
             self.tooltip.destroy()
 
@@ -133,13 +130,20 @@ class Taskbar(tk.Tk):
         start_button = self.app.taskbar.create_image(0, 0, anchor="nw", image=self.img)
         self.clock = self.app.taskbar.create_text(self.monitor_width-120, 0, text="00:00", anchor="nw",fill = "white", font=('Arial', 11, 'bold'))
 
+        self.app.bind("<Enter>", self.enter)
+        self.app.bind("<Leave>", self.leave)
+        
+        self.update_clock()
+        self.taskbar_programs()
+
+    def taskbar_programs(self):
         """
         This code retrieves a list of open applications and their main window titles using PowerShell. 
         It then creates taskbar application icons for each open application and displays a tooltip 
         with the application's main window title on hover.
         """
         command = r'powershell.exe "Get-Process | Where-Object { $_.MainWindowTitle -ne \"\" -and $_.ProcessName -ne \"Textinputhost\" } | Select-Object MainWindowTitle, Path"'
-        output = subprocess.check_output(command, shell=True, encoding='utf-8')
+        output = subprocess.check_output(command, shell=True).decode('utf-8')
         lines = output.strip().split('\n')
         app_list = [line.split() for line in lines]
 
@@ -212,10 +216,14 @@ class Taskbar(tk.Tk):
             self.taskbar_icons.append((tk_image,self.taskbar_app))
             ToolTip(self.app, self.taskbar_app, name)
 
-        self.app.bind("<Enter>", self.enter)
-        self.app.bind("<Leave>", self.leave)
+        self.app.taskbar.after(1000, self.refresh_icons)
         
-        self.update_clock()
+    def refresh_icons(self):
+        for image in self.taskbar_icons:
+            tk_image, taskbar_app = image
+            self.app.taskbar.delete(taskbar_app)
+            self.app.taskbar.delete(tk_image)
+        self.taskbar_programs()
 
     def update_clock(self):
         if Settings.twentyfour_hour == True:
