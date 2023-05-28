@@ -7,6 +7,7 @@ from menu import Startmenu
 from ctypes import windll
 import pygetwindow as gw
 import tkinter as tk
+import win32process
 import subprocess
 import win32gui
 import win32api
@@ -14,6 +15,7 @@ import win32con
 import win32ui
 import ctypes
 import atexit
+import psutil
 import time
 import os
 import re
@@ -37,7 +39,7 @@ def toggle_app(selected_app, event=None):
         window.activate()
 
 class ToolTip:
-    def __init__(self, app, widget, text):
+    def __init__(self, app, widget, text,):
         self.app = app
         self.widget = widget
         self.text = text
@@ -70,13 +72,15 @@ class ToolTip:
             self.tooltip.destroy()
 
 class Taskbar(tk.Tk):
-    def __init__(self,app):
+    def __init__(self, app, parent):
+        self.parent = parent
         self.app = app
         self.app.config(bg='#000000')
         self.app.update()
+        self.taskbar_icons = []
 
         self.app.new_window = tk.Toplevel(self.app)
-        self.app.start = Startmenu(self.app.new_window)
+        self.app.start = Startmenu(self.app.new_window, self)
 
         #Settings
         self.taskbar_hide_var = Settings.taskbar_hide
@@ -130,100 +134,102 @@ class Taskbar(tk.Tk):
         start_button = self.app.taskbar.create_image(0, 0, anchor="nw", image=self.img)
         self.clock = self.app.taskbar.create_text(self.monitor_width-120, 0, text="00:00", anchor="nw",fill = "white", font=('Arial', 11, 'bold'))
 
+        self.app.taskbar.tag_bind(start_button, "<Button-1>", self.app.start.call)
         self.app.bind("<Enter>", self.enter)
         self.app.bind("<Leave>", self.leave)
         
         self.update_clock()
-        self.taskbar_programs()
+        self.set_taskbar_icons()
 
-    def taskbar_programs(self):
-        """
-        This code retrieves a list of open applications and their main window titles using PowerShell. 
-        It then creates taskbar application icons for each open application and displays a tooltip 
-        with the application's main window title on hover.
-        """
-        command = r'powershell.exe "Get-Process | Where-Object { $_.MainWindowTitle -ne \"\" -and $_.ProcessName -ne \"Textinputhost\" } | Select-Object MainWindowTitle, Path"'
-        output = subprocess.check_output(command, shell=True).decode('utf-8')
-        lines = output.strip().split('\n')
-        app_list = [line.split() for line in lines]
+    def get_all_apps(self):
+        all_windows = gw.getAllWindows()
 
-        taskbar_running_apps = []
-        self.taskbar_icons = []
+        all_apps = []
 
+        for win in all_windows:
+            if not any([win.isActive, win.isMaximized, win.isMinimized]):
+                continue
+            all_apps.append(win)
+
+        return all_apps
+
+    def get_app_path(self, window):
+        try:
+            hwnd = window._hWnd
+            _, pid = win32process.GetWindowThreadProcessId(hwnd)
+            process = psutil.Process(pid)
+            return process.exe()
+        except psutil.NoSuchProcess:
+            return None
+        
+    def get_icon(self, path):
+        ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
+        ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
+
+        # Extract the large system icon
+        large, small = win32gui.ExtractIconEx(path, 0)
+
+        # Create a compatible device context
+        hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
+        hbmp = win32ui.CreateBitmap()
+        hbmp.CreateCompatibleBitmap(hdc, ico_x, ico_x)
+        hdc = hdc.CreateCompatibleDC()
+
+        hdc.SelectObject(hbmp)
+        hdc.DrawIcon((0, 0), large[0])
+
+        # Save the icon as a file
+        hbmp.SaveBitmapFile(hdc, 'icon.ico')
+
+        # Load the saved icon using PIL
+        icon_image = Image.open('icon.ico')
+
+        # Convert the image to RGBA format
+        icon_image = icon_image.convert("RGBA")
+
+        # Create a transparent mask by setting black pixels to transparent
+        data = icon_image.getdata()
+        new_data = []
+        for item in data:
+            # Set black pixels (RGB < 10) to transparent
+            if item[0] < 10 and item[1] < 10 and item[2] < 10:
+                new_data.append((item[0], item[1], item[2], 0))  # Set alpha to 0 for black pixels
+            else:
+                new_data.append(item)
+
+        # Update the image with the transparent mask
+        icon_image.putdata(new_data)
+
+        # Convert the image to Tkinter-compatible format
+        icon_tk = ImageTk.PhotoImage(icon_image)
+        return icon_tk
+        
+    def set_taskbar_icons(self):
+        all_apps = self.get_all_apps()
         space = 0
-        for app in app_list[2:]:
+
+        for app in all_apps:
             space += 50
-            path = None
-            rest = []
-            current_path = None
-            for item in app:
-                if re.match(r'^(?:[A-Za-z]:)?(?:\\[^\\/:*?"<>|\r\n]+)+$', item):
-                    if current_path:
-                        current_path += ' ' + item
-                    else:
-                        current_path = item
-                elif current_path:
-                    current_path += ' ' + item
+            app_path = self.get_app_path(app)
+            if app_path:
+                icon = self.get_icon(app_path)
+                if icon:
+                    self.taskbar_app = self.app.taskbar.create_image(space, 4, anchor="nw", image=icon)
                 else:
-                    rest.append(item)
-            if current_path:
-                path = current_path
-            name = ' '.join(rest) if rest else ''
-            ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
-            ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
-
-            # Extract the large system icon
-            large, small = win32gui.ExtractIconEx(path, 0)
-
-            # Create a compatible device context
-            hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
-            hbmp = win32ui.CreateBitmap()
-            hbmp.CreateCompatibleBitmap(hdc, ico_x, ico_x)
-            hdc = hdc.CreateCompatibleDC()
-
-            hdc.SelectObject(hbmp)
-            hdc.DrawIcon((0, 0), large[0])
-
-            # Save the icon as a file
-            hbmp.SaveBitmapFile(hdc, 'icon.ico')
-
-            # Load the saved icon using PIL
-            icon_image = Image.open('icon.ico')
-
-            # Convert the image to RGBA format
-            icon_image = icon_image.convert("RGBA")
-
-            # Create a transparent mask by setting black pixels to transparent
-            data = icon_image.getdata()
-            new_data = []
-            for item in data:
-                # Set black pixels (RGB < 10) to transparent
-                if item[0] < 10 and item[1] < 10 and item[2] < 10:
-                    new_data.append((item[0], item[1], item[2], 0))  # Set alpha to 0 for black pixels
-                else:
-                    new_data.append(item)
-
-            # Update the image with the transparent mask
-            icon_image.putdata(new_data)
-
-            # Convert the image to Tkinter-compatible format
-            
-            taskbar_running_apps.append([name, icon_image])
-
-            tk_image = ImageTk.PhotoImage(icon_image)
-            self.taskbar_app = self.app.taskbar.create_image(space, 4, anchor="nw", image=tk_image)
-            self.app.taskbar.itemconfig(self.taskbar_app, state=tk.NORMAL)
-            self.taskbar_icons.append((tk_image,self.taskbar_app))
-            ToolTip(self.app, self.taskbar_app, name)
+                    self.taskbar_app = self.app.taskbar.create_image(space, 4, anchor="nw", image=self.app_icon)
+            self.taskbar_icons.append((icon, self.taskbar_app))
+            ToolTip(self.app, self.taskbar_app, app.title)
 
         self.app.taskbar.after(1000, self.refresh_icons)
         
+
+            
     def refresh_icons(self):
         for image in self.taskbar_icons:
             tk_image, taskbar_app = image
             self.app.taskbar.delete(taskbar_app)
             self.app.taskbar.delete(tk_image)
-        self.taskbar_programs()
+        self.set_taskbar_icons()
 
     def update_clock(self):
         if Settings.twentyfour_hour == True:
@@ -331,8 +337,8 @@ class Taskbar(tk.Tk):
         # Get the handle to the canvas window
         hWnd = windll.user32.GetForegroundWindow()
         blur(hWnd,hexColor="#1d1d1d",Acrylic=True,Dark=True)
+
+    def refresh_taskbar_pass(self):
+        self.parent.refresh_taskbar()
     
 
-if __name__ == "__main__":
-    window = Taskbar()
-    window.mainloop()

@@ -381,7 +381,7 @@ class Desktop_screen:
 
     def initialize_taskbar(self):
         self.new_window = tk.Toplevel(self.master)
-        Taskbar(self.new_window)
+        Taskbar(self.new_window, self)
 
     def refresh_taskbar(self):
         self.new_window.destroy()

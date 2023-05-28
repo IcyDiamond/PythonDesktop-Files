@@ -9,7 +9,8 @@ class Settings:
     add_blur = False
 
 class Setting_Menu():
-    def __init__(self, master):
+    def __init__(self, master, parent):
+        self.parent = parent
         self.window = master
         self.window.update()
         self.window.title("Taskbar Settings")
@@ -69,3 +70,4 @@ class Setting_Menu():
         # Process the settings or save them to a file
         
         self.window.destroy()
+        self.parent.refresh_taskbar_pass()

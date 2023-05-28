@@ -7,7 +7,8 @@ import os
 
 
 class Startmenu(tk.Tk):
-    def __init__(self, app):
+    def __init__(self, app, parent):
+        self.parent = parent
         self.app = app
 
         #Settings
@@ -302,5 +303,8 @@ class Startmenu(tk.Tk):
 
     def setting_menu_call(self, event=None):
         new_window = tk.Toplevel(self.app)
-        start = Setting_Menu(new_window)
+        Setting_Menu(new_window, self)
         self.menu_hide()
+
+    def refresh_taskbar_pass(self):
+        self.parent.refresh_taskbar_pass()
