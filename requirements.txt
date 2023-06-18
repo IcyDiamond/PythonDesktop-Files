@@ -5,3 +5,4 @@ BlurWindow
 screeninfo
 pynput
 pywin32
+psutil

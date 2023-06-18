@@ -5,7 +5,7 @@ from PIL import Image,ImageTk
 from settings import Settings
 from menu import Startmenu
 from ctypes import windll
-import pygetwindow as gw
+import pywinctl as pwc
 import tkinter as tk
 import win32process
 import subprocess
@@ -31,7 +31,7 @@ def set_show_state():
     ctypes.windll.user32.ShowWindow(h, 9)
 
 def toggle_app(selected_app, event=None):
-    window = gw.getWindowsWithTitle(selected_app)[0]
+    window = pwc.getWindowsWithTitle(selected_app)[0]
     if window.isMaximized:
         window.minimize()
     else:
@@ -44,6 +44,7 @@ class ToolTip:
         self.widget = widget
         self.text = text
         self.tooltip = None
+        self.ative_tooltips = []
         self.monitors = get_monitors()
         for i in range(len(self.monitors)):
             if self.monitors[i].is_primary == False:
@@ -58,6 +59,7 @@ class ToolTip:
     def enter(self, event):
         x = event.x
         self.tooltip = tk.Toplevel()
+        self.ative_tooltips.append(self.tooltip)
         self.tooltip.wm_overrideredirect(True)
         self.tooltip.wm_geometry(f"+{x-25}+{self.monitor_height-60}")
         label = tk.Label(self.tooltip, text=self.text, background="#ffffe0", relief="solid", borderwidth=1)
@@ -66,10 +68,14 @@ class ToolTip:
     def leave(self, _):
         if self.tooltip:
             self.tooltip.destroy()
+            self.ative_tooltips.remove(self.tooltip)
 
-    def __del__(self):
-        if self.tooltip:
-            self.tooltip.destroy()
+    def delete(self):
+        print("test")
+        for i in self.ative_tooltips:
+            if self.tooltip:
+                self.tooltip.destroy()
+                self.ative_tooltips.remove(self.tooltip)
 
 class Taskbar(tk.Tk):
     def __init__(self, app, parent):
@@ -142,7 +148,7 @@ class Taskbar(tk.Tk):
         self.set_taskbar_icons()
 
     def get_all_apps(self):
-        all_windows = gw.getAllWindows()
+        all_windows = pwc.getAllWindows()
 
         all_apps = []
 
@@ -163,46 +169,51 @@ class Taskbar(tk.Tk):
             return None
         
     def get_icon(self, path):
-        ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
-        ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
+        try:
+            ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
+            ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
 
-        # Extract the large system icon
-        large, small = win32gui.ExtractIconEx(path, 0)
+            # Extract the large system icon
+            large, small = win32gui.ExtractIconEx(path, 0)
 
-        # Create a compatible device context
-        hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
-        hbmp = win32ui.CreateBitmap()
-        hbmp.CreateCompatibleBitmap(hdc, ico_x, ico_x)
-        hdc = hdc.CreateCompatibleDC()
+            # Create a compatible device context
+            hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
+            hbmp = win32ui.CreateBitmap()
+            hbmp.CreateCompatibleBitmap(hdc, ico_x, ico_x)
+            hdc = hdc.CreateCompatibleDC()
 
-        hdc.SelectObject(hbmp)
-        hdc.DrawIcon((0, 0), large[0])
+            hdc.SelectObject(hbmp)
+            hdc.DrawIcon((0, 0), large[0])
 
-        # Save the icon as a file
-        hbmp.SaveBitmapFile(hdc, 'icon.ico')
+            # Save the icon as a file
+            hbmp.SaveBitmapFile(hdc, 'icon.ico')
 
-        # Load the saved icon using PIL
-        icon_image = Image.open('icon.ico')
+            # Load the saved icon using PIL
+            icon_image = Image.open('icon.ico')
 
-        # Convert the image to RGBA format
-        icon_image = icon_image.convert("RGBA")
+            # Convert the image to RGBA format
+            icon_image = icon_image.convert("RGBA")
 
-        # Create a transparent mask by setting black pixels to transparent
-        data = icon_image.getdata()
-        new_data = []
-        for item in data:
-            # Set black pixels (RGB < 10) to transparent
-            if item[0] < 10 and item[1] < 10 and item[2] < 10:
-                new_data.append((item[0], item[1], item[2], 0))  # Set alpha to 0 for black pixels
-            else:
-                new_data.append(item)
+            # Create a transparent mask by setting black pixels to transparent
+            data = icon_image.getdata()
+            new_data = []
+            for item in data:
+                # Set black pixels (RGB < 10) to transparent
+                if item[0] < 10 and item[1] < 10 and item[2] < 10:
+                    new_data.append((item[0], item[1], item[2], 0))  # Set alpha to 0 for black pixels
+                else:
+                    new_data.append(item)
 
-        # Update the image with the transparent mask
-        icon_image.putdata(new_data)
+            # Update the image with the transparent mask
+            icon_image.putdata(new_data)
 
-        # Convert the image to Tkinter-compatible format
-        icon_tk = ImageTk.PhotoImage(icon_image)
-        return icon_tk
+            # Convert the image to Tkinter-compatible format
+            icon_tk = ImageTk.PhotoImage(icon_image)
+        
+            return icon_tk
+        except:
+            return self.app_icon
+
         
     def set_taskbar_icons(self):
         all_apps = self.get_all_apps()
@@ -339,6 +350,7 @@ class Taskbar(tk.Tk):
         blur(hWnd,hexColor="#1d1d1d",Acrylic=True,Dark=True)
 
     def refresh_taskbar_pass(self):
+        ToolTip.delete()
         self.parent.refresh_taskbar()
     
 
