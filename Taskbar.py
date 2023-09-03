@@ -1,7 +1,6 @@
 from BlurWindow.blurWindow import blur
 from screeninfo import get_monitors
 from PIL import Image, ImageTk
-from PIL import Image,ImageTk
 from settings import Settings
 from menu import Startmenu
 from ctypes import windll
@@ -72,10 +71,10 @@ class ToolTip:
 
     def delete(self):
         print("test")
-        for i in self.ative_tooltips:
-            if self.tooltip:
-                self.tooltip.destroy()
-                self.ative_tooltips.remove(self.tooltip)
+        #for i in self.ative_tooltips:
+        #    if self.tooltip:
+        #        self.tooltip.destroy()
+        #        self.ative_tooltips.remove(self.tooltip)
 
 class Taskbar(tk.Tk):
     def __init__(self, app, parent):
@@ -174,14 +173,8 @@ class Taskbar(tk.Tk):
             ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
 
             # Extract the large system icon
-        try:
-                large, small = win32gui.ExtractIconEx(path, 0)
+            large, small = win32gui.ExtractIconEx(path, 0)
 
-            # Create a compatible device context
-            hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
-            hbmp = win32ui.CreateBitmap()
-            hbmp.CreateCompatibleBitmap(hdc, ico_x, ico_x)
-            hdc = hdc.CreateCompatibleDC()
             # Create a compatible device context
             hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
             hbmp = win32ui.CreateBitmap()
@@ -190,33 +183,16 @@ class Taskbar(tk.Tk):
 
             hdc.SelectObject(hbmp)
             hdc.DrawIcon((0, 0), large[0])
-            hdc.SelectObject(hbmp)
-            hdc.DrawIcon((0, 0), large[0])
 
-            # Save the icon as a file
-            hbmp.SaveBitmapFile(hdc, 'icon.ico')
             # Save the icon as a file
             hbmp.SaveBitmapFile(hdc, 'icon.ico')
 
             # Load the saved icon using PIL
             icon_image = Image.open('icon.ico')
-            # Load the saved icon using PIL
-            icon_image = Image.open('icon.ico')
 
             # Convert the image to RGBA format
             icon_image = icon_image.convert("RGBA")
-            # Convert the image to RGBA format
-            icon_image = icon_image.convert("RGBA")
 
-            # Create a transparent mask by setting black pixels to transparent
-            data = icon_image.getdata()
-            new_data = []
-            for item in data:
-                # Set black pixels (RGB < 10) to transparent
-                if item[0] < 10 and item[1] < 10 and item[2] < 10:
-                    new_data.append((item[0], item[1], item[2], 0))  # Set alpha to 0 for black pixels
-                else:
-                    new_data.append(item)
             # Create a transparent mask by setting black pixels to transparent
             data = icon_image.getdata()
             new_data = []
@@ -371,7 +347,7 @@ class Taskbar(tk.Tk):
         blur(hWnd,hexColor="#1d1d1d",Acrylic=True,Dark=True)
 
     def refresh_taskbar_pass(self):
-        ToolTip.delete()
+        ToolTip.delete(self)
         self.parent.refresh_taskbar()
     
 

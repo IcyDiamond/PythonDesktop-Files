@@ -779,7 +779,7 @@ class Desktop_screen:
         if self.selected_img == img:
             x, y = (event.x - self.desktop.x), (event.y - self.desktop.y)
             x_coords, y_coords = self.desktop.coords(self.selected_img)
-            print(self.desktop.coords(self.selected_img))
+            #print(self.desktop.coords(self.selected_img))
             if event.x > self.monitor_width:
                 self.desktop.move(self.selected_img, 0, y)
                 self.desktop.move(txt, 0, y)
@@ -834,5 +834,4 @@ if __name__ == "__main__":
     #os.system('taskkill /f /im explorer.exe')
     #atexit.register(exit_handler)
     window = App()
-    signup_screen = Signup_screen(window)
     window.mainloop()
