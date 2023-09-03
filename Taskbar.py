@@ -174,8 +174,14 @@ class Taskbar(tk.Tk):
             ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
 
             # Extract the large system icon
-            large, small = win32gui.ExtractIconEx(path, 0)
+        try:
+                large, small = win32gui.ExtractIconEx(path, 0)
 
+            # Create a compatible device context
+            hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
+            hbmp = win32ui.CreateBitmap()
+            hbmp.CreateCompatibleBitmap(hdc, ico_x, ico_x)
+            hdc = hdc.CreateCompatibleDC()
             # Create a compatible device context
             hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
             hbmp = win32ui.CreateBitmap()
@@ -184,16 +190,33 @@ class Taskbar(tk.Tk):
 
             hdc.SelectObject(hbmp)
             hdc.DrawIcon((0, 0), large[0])
+            hdc.SelectObject(hbmp)
+            hdc.DrawIcon((0, 0), large[0])
 
+            # Save the icon as a file
+            hbmp.SaveBitmapFile(hdc, 'icon.ico')
             # Save the icon as a file
             hbmp.SaveBitmapFile(hdc, 'icon.ico')
 
             # Load the saved icon using PIL
             icon_image = Image.open('icon.ico')
+            # Load the saved icon using PIL
+            icon_image = Image.open('icon.ico')
 
             # Convert the image to RGBA format
             icon_image = icon_image.convert("RGBA")
+            # Convert the image to RGBA format
+            icon_image = icon_image.convert("RGBA")
 
+            # Create a transparent mask by setting black pixels to transparent
+            data = icon_image.getdata()
+            new_data = []
+            for item in data:
+                # Set black pixels (RGB < 10) to transparent
+                if item[0] < 10 and item[1] < 10 and item[2] < 10:
+                    new_data.append((item[0], item[1], item[2], 0))  # Set alpha to 0 for black pixels
+                else:
+                    new_data.append(item)
             # Create a transparent mask by setting black pixels to transparent
             data = icon_image.getdata()
             new_data = []
@@ -209,11 +232,9 @@ class Taskbar(tk.Tk):
 
             # Convert the image to Tkinter-compatible format
             icon_tk = ImageTk.PhotoImage(icon_image)
-        
-            return icon_tk
-        except:
-            return self.app_icon
-
+        except IndexError:
+            icon_tk = self.app_icon
+        return icon_tk
         
     def set_taskbar_icons(self):
         all_apps = self.get_all_apps()

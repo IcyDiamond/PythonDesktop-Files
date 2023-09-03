@@ -373,6 +373,7 @@ class Desktop_screen:
         self.y = None
         self.icon_id = 0
         self.monitor_height = variables.monitor_height
+        self.monitor_width = variables.monitor_width
         
         self.max = 900
         self.size = 100
@@ -777,10 +778,23 @@ class Desktop_screen:
     def on_image_move(self, event, img, txt):
         if self.selected_img == img:
             x, y = (event.x - self.desktop.x), (event.y - self.desktop.y)
-            self.desktop.move(self.selected_img, x, y)
-            self.desktop.move(txt, x, y)
-            self.desktop.x = event.x
-            self.desktop.y = event.y
+            x_coords, y_coords = self.desktop.coords(self.selected_img)
+            print(self.desktop.coords(self.selected_img))
+            if event.x > self.monitor_width:
+                self.desktop.move(self.selected_img, 0, y)
+                self.desktop.move(txt, 0, y)
+                self.desktop.x = event.x
+                self.desktop.y = event.y
+            elif event.x < 0:
+                self.desktop.move(self.selected_img, 0, y)
+                self.desktop.move(txt, 0, y)
+                self.desktop.x = event.x
+                self.desktop.y = event.y
+            else:
+                self.desktop.move(self.selected_img, x, y)
+                self.desktop.move(txt, x, y)
+                self.desktop.x = event.x
+                self.desktop.y = event.y
 
     # function to handle the release event
     def on_image_release(self, event, img, txt):
