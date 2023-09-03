@@ -9,12 +9,6 @@ What things you need to install the software and how to install them
 ```
 pip install -r requirements.txt
 ```
-Or install them individually
-```
-pip install tkinter
-pip install pillow
-pip install screeninfo
-```
 
 ## Getting Started
 
