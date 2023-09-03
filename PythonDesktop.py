@@ -39,7 +39,7 @@ class App(tk.Tk):
         self.signin_frame.grid_propagate(0)
         self.signup_frame.grid_propagate(0)
         self.desktop_frame.grid_propagate(0)
-        self.signin_screen = signin_screen(self)
+        self.signin_screen = Signin_screen(self)
 
 class Variables:
     def __init__(self):
@@ -85,13 +85,14 @@ class Auth:
     confirm_password_input_value = True
 
 #signin screen
-class signin_screen:
+class Signin_screen:
     def __init__(self, master):
         self.master = master
         self.initialized = False
-        self.initialize_obj()
+        self.initialize_object()
 
-    def initialize_obj(self):
+    #Set up the window with the widgets
+    def initialize_object(self):
         if not self.initialized:
             #places the signin frame
             self.master.signin_frame.pack()
@@ -159,7 +160,7 @@ class signin_screen:
         self.username_input_value = True
         self.password_input_value = True
         self.desktop = Desktop_screen(self.master)
-        self.desktop.initialize_obj()
+        self.desktop.initialize_object()
     
     def stored_check(self):
         if Auth.username_stored_value == True:
@@ -181,7 +182,7 @@ class signin_screen:
         Auth.confirm_password_input_value = True
 
         self.signup_screen = Signup_screen(self.master)
-        self.signup_screen.initialize_obj()
+        self.signup_screen.initialize_object()
         
     #if the field is emtpy it puts the text "password"
     def password_out(self,e):
@@ -209,11 +210,11 @@ class signin_screen:
             self.username_input.delete(0, "end")
             Auth.username_input_value = False
 
-class Signup_screen():
+class Signup_screen:
     def __init__(self, master):
         self.master = master        
 
-    def initialize_obj(self):
+    def initialize_object(self):
         self.master.signup_frame.pack()
         
         #clears any widgets
@@ -288,7 +289,7 @@ class Signup_screen():
         os.mkdir(f"{variables.users}\\{Auth.username}\\desktop")
 
         messagebox.showinfo("Success","signup successful!")
-        self.master.signin_screen = signin_screen(self.master)
+        self.master.signin_screen = Signin_screen(self.master)
 
     def stored_check(self):
         if Auth.username_stored_value == True:
@@ -308,8 +309,8 @@ class Signup_screen():
         Auth.password_input_value = True
         Auth.confirm_password_input_value = True
 
-        self.master.signin_screen = signin_screen(self.master)
-        self.master.signin_screen.initialize_obj()
+        self.master.signin_screen = Signin_screen(self.master)
+        self.master.signin_screen.initialize_object()
 
     #if the username is emtpy or just spaces
     def username_out(self,e):
@@ -351,9 +352,10 @@ class Signup_screen():
             self.confirm_password_input.delete(0, "end")
             Auth.confirm_password_input_value = False
 
-class Desktop_screen():
+class Desktop_screen:
     def __init__(self, master):
         self.master = master
+        self.icons = []
         self.img_ref = []
         self.text_ref = []
         self.icon_dict = {}
@@ -371,6 +373,7 @@ class Desktop_screen():
         self.y = None
         self.icon_id = 0
         self.monitor_height = variables.monitor_height
+        self.monitor_width = variables.monitor_width
         
         self.max = 900
         self.size = 100
@@ -379,9 +382,13 @@ class Desktop_screen():
 
     def initialize_taskbar(self):
         self.new_window = tk.Toplevel(self.master)
-        self.start = Taskbar(self.new_window)
+        Taskbar(self.new_window, self)
 
-    def initialize_obj(self):
+    def refresh_taskbar(self):
+        self.new_window.destroy()
+        self.initialize_taskbar()
+
+    def initialize_object(self):
         #clears any widgets
         for widgets in self.master.signin_frame.winfo_children():
             widgets.destroy()
@@ -464,7 +471,7 @@ class Desktop_screen():
 
         self.desktop_submenu.entryconfig("Large icons", state="normal")
         self.desktop_submenu.entryconfig("Medium icons", state="normal")
-        self.desktop_submenu.entryconfig("Small icons", state="disabled")
+        self.desktop_submenu.entryconfig("Small icons", state="normal")
 
         self.desktop_submenu.entryconfig("Auto Arrange icons", state="disabled")
         self.desktop_submenu.entryconfig("Align icons to grid", state="normal")
@@ -523,17 +530,26 @@ class Desktop_screen():
 
         os.makedirs(f"{variables.users}\\{Auth.username}\\desktop\\{files}")
 
+        if self.view_icons_value == False:
+            view = tk.HIDDEN
+        else:
+            view = tk.NORMAL
+
         self.image = self.desktop.create_image(icon_x, icon_y, image=self.folders, tags=files.replace(' ', '/'))
-        self.img_ref.append(self.icon_photo)
-        self.img_ref.append(self.folders)
         text = self.desktop.create_text(icon_x,
                                         icon_y + 30,
                                         text=files[:15] + "..." if len(files) > 15 else files,
                                         anchor="n", font=("Arial", 11))
-        self.text_ref.append(text)
-        image_id = len(self.icon_dict)+1
+        self.desktop.itemconfig(self.image, state=view)
+        self.desktop.itemconfig(text, state=view)
         self.icon_dict[files.replace(' ', '/')] = (icon_x, icon_y)
+
         self.file_dump()
+        self.img_ref.append(self.icon_photo)
+        self.img_ref.append(self.folders)
+        self.text_ref.append(text)
+        self.icons.append(self.image)
+        self.icons.append(text)
         
         x = int(icon_x/100)*100
         y = int(icon_y/100)*100
@@ -588,8 +604,8 @@ class Desktop_screen():
             if self.icon_size_var_set == 'small':
                 for i in self.icon_dict:
                     icon_x, icon_y = self.icon_dict[i]
-                    icon_x = round(icon_x * 2.8)
-                    icon_y = round(icon_y * 2.8)
+                    icon_x = round(icon_x * 1.96)
+                    icon_y = round(icon_y * 1.96)
                     self.icon_dict[i] = (icon_x, icon_y)
                 
         if height == 50:
@@ -613,14 +629,14 @@ class Desktop_screen():
                     self.icon_dict[i] = (icon_x, icon_y)
         if height == 35:
             self.icon_photo = PhotoImage(file=os.path.join(variables.icon_images, "UnknownIcon_Medium.png"))
-            self.folders = ImageTk.PhotoImage(Image.open(os.path.join(variables.icon_images, "Folder_medium.png")))
+            self.folders = ImageTk.PhotoImage(Image.open(os.path.join(variables.icon_images, "Folder_small.png")))
             if initialized:
                 return
             if self.icon_size_var_set == 'large':
                 for i in self.icon_dict:
                     icon_x, icon_y = self.icon_dict[i]
-                    icon_x = round(icon_x / 2.8)
-                    icon_y = round(icon_y / 2.8)
+                    icon_x = round(icon_x / 1.96)
+                    icon_y = round(icon_y / 1.96)
                     self.icon_dict[i] = (icon_x, icon_y)
             if self.icon_size_var_set == 'medium':
                 for i in self.icon_dict:
@@ -642,20 +658,18 @@ class Desktop_screen():
     def veiw_icons(self):
         if self.view_icons_value != True:
             self.view_icons_value=True
-            item_ids = self.desktop.find_all()
-            for item_id in item_ids:
+            for img in self.icons:
                 try:
-                    self.desktop.itemconfig(item_id, state=tk.NORMAL)
-                except tk.TclError as e:
-                    pass
+                    self.desktop.itemconfig(img, state=tk.NORMAL)
+                except tk.TclError:
+                    self.icons.remove(img)
         else:
             self.view_icons_value=False
-            item_ids = self.desktop.find_all()
-            for item_id in item_ids:
+            for img in self.icons:
                 try:
-                    self.desktop.itemconfig(item_id, state=tk.HIDDEN)
-                except tk.TclError as e:
-                    pass
+                    self.desktop.itemconfig(img, state=tk.HIDDEN)
+                except tk.TclError:
+                    self.icons.remove(img)
 
     def place_icons(self):
         variables.refresh_var()
@@ -663,12 +677,14 @@ class Desktop_screen():
         size = self.icon_numsize
         height = self.height
         add = self.add
+        icon_y = self.icon_height-add
+        icon_x = self.icon_height-add
+
         try:
             with open(f"{variables.users}\\{Auth.username}\\icon_position.json", "r") as file:
                 self.icon_dict = json.load(file)
         except:
             self.icon_dict = self.icon_dict
-        self.icon_size(max, size, height, add, True)
         
         for image in self.img_ref:
             self.desktop.delete(image)
@@ -676,10 +692,9 @@ class Desktop_screen():
         for text in self.text_ref:
             self.desktop.delete(text)
 
-        icon_y = self.icon_height-add
-        icon_x = self.icon_height-add
         self.img_ref = []
         self.text_ref = []
+        self.icon_size(max, size, height, add, True)
 
         for files in os.listdir(variables.desktop_list):
             file_path = os.path.join(variables.desktop_list, files)
@@ -710,9 +725,6 @@ class Desktop_screen():
 
             self.icon_id += 1
 
-            self.img_ref.append(self.icon_photo)
-            self.img_ref.append(self.folders)
-
             text = self.desktop.create_text(icon_x,
                                         icon_y + 30 + (self.add*2+self.add//2),
                                         text=files[:15] + "..." if len(files) > 15 else files,
@@ -720,6 +732,10 @@ class Desktop_screen():
             
             self.desktop.itemconfig(text, state=view)
 
+            self.img_ref.append(self.icon_photo)
+            self.img_ref.append(self.folders)
+            self.icons.append(self.image)
+            self.icons.append(text)
             self.text_ref.append(text)
             
             self.desktop.tag_bind(self.image, "<Button-1>", lambda event, img=self.image, txt=text: self.on_image_press(event, img, txt))
@@ -728,7 +744,7 @@ class Desktop_screen():
             self.desktop.tag_bind(self.image, "<B1-Motion>", lambda event, img=self.image, txt=text: self.on_image_move(event, img, txt))
             self.desktop.tag_bind(self.image, "<ButtonRelease-1>", lambda event, img=self.image, txt=text: self.on_image_release(event, img, txt))
 
-
+            #find the next available spot 
             if icon_y > self.icon_max:
                 icon_y = -50-(self.add*2)
                 icon_x += self.icon_numsize
@@ -760,15 +776,25 @@ class Desktop_screen():
         
     # function to handle the move event
     def on_image_move(self, event, img, txt):
-        image_id = self.desktop.gettags(img)[0]
-        location = self.icon_dict[image_id]
-
         if self.selected_img == img:
             x, y = (event.x - self.desktop.x), (event.y - self.desktop.y)
-            self.desktop.move(self.selected_img, x, y)
-            self.desktop.move(txt, x, y)
-            self.desktop.x = event.x
-            self.desktop.y = event.y
+            x_coords, y_coords = self.desktop.coords(self.selected_img)
+            #print(self.desktop.coords(self.selected_img))
+            if event.x > self.monitor_width:
+                self.desktop.move(self.selected_img, 0, y)
+                self.desktop.move(txt, 0, y)
+                self.desktop.x = event.x
+                self.desktop.y = event.y
+            elif event.x < 0:
+                self.desktop.move(self.selected_img, 0, y)
+                self.desktop.move(txt, 0, y)
+                self.desktop.x = event.x
+                self.desktop.y = event.y
+            else:
+                self.desktop.move(self.selected_img, x, y)
+                self.desktop.move(txt, x, y)
+                self.desktop.x = event.x
+                self.desktop.y = event.y
 
     # function to handle the release event
     def on_image_release(self, event, img, txt):
@@ -776,13 +802,18 @@ class Desktop_screen():
         x = int(event.x/self.icon_numsize)*self.icon_numsize
         y = int(event.y/self.icon_numsize)*self.icon_numsize
         if self.grid == False:
-            return
-        self.desktop.coords(img, x+self.icon_numsize//2, y+self.icon_numsize//2)
-        self.desktop.coords(txt, x+self.icon_numsize//2, y+self.height+self.height//2+5 )
+            x, y = self.desktop.coords(img)
+            x, y = round(x), round(y)
+        else:
+            self.desktop.coords(img, x+self.icon_numsize//2, y+self.icon_numsize//2)
+            self.desktop.coords(txt, x+self.icon_numsize//2, y+self.height+self.height//2+5)
 
         # update location of the image in the dictionary
         image_id = self.desktop.gettags(img)[0]
-        self.icon_dict[image_id] = (x+self.icon_numsize//2, y+self.icon_numsize//2)
+        if self.grid == False:
+            self.icon_dict[image_id] = (x, y)
+        else:
+            self.icon_dict[image_id] = (x+self.icon_numsize//2, y+self.icon_numsize//2)
         self.file_dump()
 
     def file_dump(self):
@@ -795,7 +826,6 @@ class Desktop_screen():
             self.grid=False
         else:
             self.grid=True
-        print(self.desktop.winfo_children())
 
 if __name__ == "__main__":
     variables = Variables()
@@ -804,5 +834,4 @@ if __name__ == "__main__":
     #os.system('taskkill /f /im explorer.exe')
     #atexit.register(exit_handler)
     window = App()
-    signup_screen = Signup_screen(window)
     window.mainloop()

@@ -1,3 +1,10 @@
 screeninfo
 pillow
-tkinter
+pygetwindow
+BlurWindow
+screeninfo
+pynput
+pywin32
+psutil
+pywinctl
+typing_extensions

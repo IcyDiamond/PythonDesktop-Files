@@ -1,13 +1,14 @@
 import tkinter as tk
 from screeninfo import get_monitors
 from pynput.mouse import Listener
-from settings import Settings
+from settings import Settings, Setting_Menu
 import threading
 import os
 
 
 class Startmenu(tk.Tk):
-    def __init__(self, app):
+    def __init__(self, app, parent):
+        self.parent = parent
         self.app = app
 
         #Settings
@@ -61,6 +62,8 @@ class Startmenu(tk.Tk):
         self.start_menu.pack(expand="true",fill="both")
         self.sidebar = tk.Canvas(self.start_menu, background='#181818', width=60, height=655, highlightthickness=0)
         self.sidebar.place(anchor="nw")
+        #self.account_icon_menu = tk.Canvas(self.app, background='#202020', width=256, height=106, highlightthickness=0)
+        
 
 
         self.sidebar.bind("<Enter>", self.enter)
@@ -77,13 +80,17 @@ class Startmenu(tk.Tk):
         self.sidebar.tag_bind(menu, "<Button-1>", self.sidebar_call)
         self.sidebar.tag_bind(menu1, "<Button-1>", self.sidebar_call)
         
-        self.sidebar.create_image(0,405,anchor="nw",image=self.account)
-        self.sidebar.create_text(70,
+        account = self.sidebar.create_image(0,405,anchor="nw",image=self.account)
+        account1 =self.sidebar.create_text(70,
                                          420,
                                          text="Test User"
                                          , font=("Arial", 16),
                                          anchor="nw",
                                          fill="white")
+        
+        #self.sidebar.tag_bind(account, "<Button-1>", self.profile_menu_call)
+        #self.sidebar.tag_bind(account1, "<Button-1>", self.profile_menu_call)
+
         documents = self.sidebar.create_image(0,455,anchor="nw",image=self.document)
         documents1 = self.sidebar.create_text(70,
                                          470,
@@ -104,13 +111,16 @@ class Startmenu(tk.Tk):
         self.sidebar.tag_bind(pictures, "<Button-1>", lambda event=None: self.open_file(os.path.expanduser("~\\Pictures"),event))
         self.sidebar.tag_bind(pictures1, "<Button-1>", lambda event=None: self.open_file(os.path.expanduser("~\\Pictures"),event))
 
-        self.sidebar.create_image(0,555,anchor="nw",image=self.settings)
-        self.sidebar.create_text(70,
+        settings = self.sidebar.create_image(0,555,anchor="nw",image=self.settings)
+        settings1 = self.sidebar.create_text(70,
                                          570,
                                          text="Settings"
                                          , font=("Arial", 16),
                                          anchor="nw",
                                          fill="white")
+        self.sidebar.tag_bind(settings, "<Button-1>", self.setting_menu_call)
+        self.sidebar.tag_bind(settings1, "<Button-1>", self.setting_menu_call)
+
         self.sidebar.create_image(0,605,anchor="nw",image=self.power)
         self.sidebar.create_text(70,
                                          620,
@@ -118,7 +128,7 @@ class Startmenu(tk.Tk):
                                          , font=("Arial", 16),
                                          anchor="nw",
                                          fill="white")
-
+        
     def open_file(self, file, event=None):
         os.startfile(file)
         self.menu_hide()
@@ -144,8 +154,9 @@ class Startmenu(tk.Tk):
             return
         
         self.sidebar.configure(width=t)
-        if t > 300:
+        if t > 256:
             self.side_bar_active = True
+            self.sidebar.configure(width=256)
             return
         self.app.after(1, self.sidebar_right, t+5)
 
@@ -162,6 +173,9 @@ class Startmenu(tk.Tk):
             self.sidebar_right(width)
         else:
             self.sidebar_left(width)
+
+    #def profile_menu_call(self, event=None):
+        #self.account_icon_menu.place(anchor="nw", y=299)
 
     def call(self, event=None):
         x = threading.Thread(target=self.mouse)
@@ -231,6 +245,7 @@ class Startmenu(tk.Tk):
 
     def menu_hide(self):
         self.menu_movement = True
+        #self.account_icon_menu.place_forget()
         
         if Settings.taskbar_location == "Bottom":
             t = self.app.winfo_y()
@@ -288,10 +303,25 @@ class Startmenu(tk.Tk):
 
     def mouse(self):
         with Listener(on_click=self.on_click) as listener:
-            listener.join()
+            try:
+                listener.join()
+            except tk.TclError:
+                print("Mouse Listener Error Avoided")
+                pass
 
     def on_click(self,x, y, button, pressed):
         if pressed:
-            if y < self.app.winfo_y() or x > self.app.winfo_x()+self.app.winfo_width():
-                if self.menu_active:
-                    self.menu_hide()
+            try:
+                if y < self.app.winfo_y() or x > self.app.winfo_x()+self.app.winfo_width():
+                    if self.menu_active:
+                        self.menu_hide()
+            except tk.TclError:
+                pass
+
+    def setting_menu_call(self, event=None):
+        new_window = tk.Toplevel(self.app)
+        Setting_Menu(new_window, self)
+        self.menu_hide()
+
+    def refresh_taskbar_pass(self):
+        self.parent.refresh_taskbar_pass()
