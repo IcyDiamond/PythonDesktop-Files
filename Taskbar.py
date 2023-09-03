@@ -229,9 +229,7 @@ class Taskbar(tk.Tk):
             ToolTip(self.app, self.taskbar_app, app.title)
 
         self.app.taskbar.after(1000, self.refresh_icons)
-        
-
-            
+          
     def refresh_icons(self):
         for image in self.taskbar_icons:
             tk_image, taskbar_app = image
