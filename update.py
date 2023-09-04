@@ -9,7 +9,7 @@ import subprocess
 
 
 # Define your GitHub repository URL and the version tracking file URL
-repo = 'Main'
+repo = 'Dev-Test'
 authors = "IcyDiamond"
 
 repository_url = f'https://github.com/{authors}/PythonDesktop-Files'
