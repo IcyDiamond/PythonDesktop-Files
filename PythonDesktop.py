@@ -14,6 +14,8 @@ import time
 import sys
 import os
 
+
+update_version = 1.0
 #threadlist = []
 #threadlist.append(Thread(target=lambda: os.system('explorer.exe &')))
 #threadlist.append(Thread(target=lambda: os.kill(os.getpid(), signal.SIGTERM)))

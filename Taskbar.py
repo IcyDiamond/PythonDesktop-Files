@@ -208,7 +208,7 @@ class Taskbar(tk.Tk):
 
             # Convert the image to Tkinter-compatible format
             icon_tk = ImageTk.PhotoImage(icon_image)
-        except IndexError:
+        except:
             icon_tk = self.app_icon
         return icon_tk
         
@@ -229,9 +229,7 @@ class Taskbar(tk.Tk):
             ToolTip(self.app, self.taskbar_app, app.title)
 
         self.app.taskbar.after(1000, self.refresh_icons)
-        
-
-            
+          
     def refresh_icons(self):
         for image in self.taskbar_icons:
             tk_image, taskbar_app = image
