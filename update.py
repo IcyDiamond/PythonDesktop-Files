@@ -9,8 +9,12 @@ import subprocess
 
 
 # Define your GitHub repository URL and the version tracking file URL
-repo = 'Dev-Test'
+repo = 'main' # Currently only "main" or "Dev-Test"
 authors = "IcyDiamond"
+if repo == 'main':
+    temp_repo = 'Main'
+else:
+    temp_repo=f'{repo}'
 
 repository_url = f'https://github.com/{authors}/PythonDesktop-Files'
 version_file_url = f'https://raw.githubusercontent.com/{authors}/PythonDesktop-Files/{repo}/PythonDesktop.py'
@@ -58,7 +62,7 @@ if response.status_code == 200:
                             shutil.rmtree(i)
 
                         # Replace with the repository URL
-                        repo_url = 'https://github.com/IcyDiamond/PythonDesktop-Files/archive/main.zip'
+                        repo_url = f'https://github.com/IcyDiamond/PythonDesktop-Files/archive/{repo}.zip'
 
                         # Make a request to download the ZIP archive
                         response = requests.get(repo_url)
@@ -74,14 +78,17 @@ if response.status_code == 200:
 
                 print('Update complete. Please restart the script.')
         # Define the content of the new Python script
-        new_script_content = """
+        i = "{i}"
+        script_path = "{script_path}"
+        e = "{str(e)}"
+        new_script_content = f"""
 import os
 import shutil
 os.remove('update.py')
-for i in os.listdir('PythonDesktop-Files-Main'):
-    shutil.move(f"PythonDesktop-Files-Main/{i}", os.getcwd())
+for i in os.listdir('PythonDesktop-Files-{temp_repo}'):
+    shutil.move(f"PythonDesktop-Files-{temp_repo}/{i}", os.getcwd())
     print(f'moving {i}')
-shutil.rmtree('PythonDesktop-Files-Main')
+shutil.rmtree('PythonDesktop-Files-{temp_repo}')
 
 def delete_self():
     try:
@@ -95,7 +102,7 @@ def delete_self():
         print(f"Script '{script_path}' deleted successfully.")
     except Exception as e:
         # If there's an error, print an error message
-        print(f"Error deleting the script: {str(e)}")
+        print(f"Error deleting the script: {e}")
 
 if __name__ == "__main__":
     print("This script will delete itself after it's done.")
