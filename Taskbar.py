@@ -38,43 +38,44 @@ def toggle_app(selected_app, event=None):
         window.activate()
 
 class ToolTip:
-    def __init__(self, app, widget, text,):
-        self.app = app
+    def __init__(self, widget, text):
         self.widget = widget
         self.text = text
         self.tooltip = None
-        self.ative_tooltips = []
-        self.monitors = get_monitors()
-        for i in range(len(self.monitors)):
-            if self.monitors[i].is_primary == False:
-                pass
-            else:
-                self.monitor_width = self.monitors[i].width
-                self.monitor_height = self.monitors[i].height
-        self.app.taskbar.tag_bind(widget, "<Enter>", self.enter)
-        self.app.taskbar.tag_bind(widget, "<Leave>", self.leave)
-        self.app.taskbar.tag_bind(widget, "<Button-1>", lambda event, app=text: toggle_app(app))
+        self.label = None
+        self.widget.bind("<Enter>", self.show_tooltip)
+        self.widget.bind("<Leave>", self.hide_tooltip)
 
-    def enter(self, event):
-        x = event.x
-        self.tooltip = tk.Toplevel()
-        self.ative_tooltips.append(self.tooltip)
+    def show_tooltip(self, event):
+        x, y, _, _ = self.widget.bbox("insert")
+        x += self.widget.winfo_rootx()
+        y += self.widget.winfo_rooty() - 25
+
+        # Destroy the previous label if it exists
+        if self.label:
+            self.label.destroy()
+
+        self.tooltip = tk.Toplevel(self.widget)
         self.tooltip.wm_overrideredirect(True)
-        self.tooltip.wm_geometry(f"+{x-25}+{self.monitor_height-60}")
-        label = tk.Label(self.tooltip, text=self.text, background="#ffffe0", relief="solid", borderwidth=1)
-        label.pack()
+        self.tooltip.wm_geometry(f"+{x}+{y}")
 
-    def leave(self, _):
+        self.label = tk.Label(self.tooltip, text=self.text, background="lightyellow", relief="solid", borderwidth=1)
+        self.label.pack()
+
+    def hide_tooltip(self, event):
         if self.tooltip:
             self.tooltip.destroy()
-            self.ative_tooltips.remove(self.tooltip)
+            self.tooltip = None
+            # Destroy the label when hiding the tooltip
+            if self.label:
+                self.label.destroy()
+                self.label = None
 
-    def delete(self):
-        print("test")
-        #for i in self.ative_tooltips:
-        #    if self.tooltip:
-        #        self.tooltip.destroy()
-        #        self.ative_tooltips.remove(self.tooltip)
+    def update_tooltip_text(self, new_text):
+        self.text = new_text
+        # Check if the label exists and configure it
+        if self.label:
+            self.label.config(text=new_text)
 
 class Taskbar(tk.Tk):
     def __init__(self, app, parent):
@@ -136,9 +137,14 @@ class Taskbar(tk.Tk):
         self.app_icon = ImageTk.PhotoImage(Image.open(os.path.join(f"{images_dir}\\GenericApp.png")))
 
         self.windows = {}
+        self.image_cache = {}
 
         start_button = self.app.taskbar.create_image(0, 0, anchor="nw", image=self.img)
         self.clock = self.app.taskbar.create_text(self.monitor_width-120, 0, text="00:00", anchor="nw",fill = "white", font=('Arial', 11, 'bold'))
+
+        self.app.taskbar.grid_rowconfigure(0, weight=1)  # Allow buttons to expand horizontally
+        self.windows_frame = tk.Frame(self.app.taskbar, bg='black')
+        self.windows_frame.place(x=40)
 
         self.app.taskbar.tag_bind(start_button, "<Button-1>", self.app.start.call)
         self.app.bind("<Enter>", self.enter)
@@ -153,32 +159,76 @@ class Taskbar(tk.Tk):
         self.app.taskbar.after(1000, self.auto_update)
         
 
-    def create_application(self, app_name, hwnd):
+    def create_application(self, app_name, hwnd, exe_path):
         if hwnd in self.windows:
-            _, app_button = self.windows[hwnd]
+            _, app_button, tooltip = self.windows[hwnd]
             app_button.config(text=app_name)  # Update the text on the button
+            self.update_application_name(hwnd, app_name)
         else:
-            app_button = tk.Button(self.app.taskbar, text=app_name, bg='black', fg='white', wraplength=80, borderwidth=0, command=lambda name=app_name: self.focus_application(name))
-            app_button.place(x=(len(self.windows)*100)+60)
-            print(len(self.windows)+1)
-        self.windows[hwnd] = (app_name, app_button)
+            ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
+            ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
+
+            large, small = win32gui.ExtractIconEx(exe_path,0)
+            win32gui.DestroyIcon(small[0])
+
+            hdc = win32ui.CreateDCFromHandle( win32gui.GetDC(0) )
+            hbmp = win32ui.CreateBitmap()
+            hbmp.CreateCompatibleBitmap( hdc, ico_x, ico_x )
+            hdc = hdc.CreateCompatibleDC()
+
+            hdc.SelectObject( hbmp )
+            hdc.DrawIcon( (0,0), large[0] )
+
+            hbmp.SaveBitmapFile( hdc, 'icon.bmp')
+
+            icon_image = Image.open('icon.bmp')
+
+            # Create and store the ImageTk.PhotoImage object
+            photo = ImageTk.PhotoImage(icon_image)
+            self.image_cache[hwnd] = photo
+
+            app_button = tk.Button(self.windows_frame, text=app_name, bg='black', fg='white', wraplength=80, borderwidth=0, image=photo, command=lambda name=app_name: self.focus_application(name))
+            app_button.pack(side='left', padx=5)
+
+            # Create a tooltip for the button
+            tooltip = ToolTip(app_button, app_name)
+
+            # Store the tooltip reference in self.windows
+            self.windows[hwnd] = (app_name, app_button, tooltip)
+
+    def update_application_name(self, hwnd, new_name):
+        if hwnd in self.windows:
+            app_name, app_button, tooltip = self.windows[hwnd]
+            app_name = new_name
+            app_button.config(text=new_name)
+            tooltip.update_tooltip_text(new_name)
 
     def delete_applications(self):
         active_hwnds = set()
         win32gui.EnumWindows(lambda hwnd, _: active_hwnds.add(hwnd), None)
         inactive_hwnds = [hwnd for hwnd in self.windows.keys() if hwnd not in active_hwnds]
-        for hwnd in inactive_hwnds:
-            app_name, app_button = self.windows.pop(hwnd)
-            app_button.destroy()
-            
-        self.windows = {hwnd: (app_name, app_button) for hwnd, (app_name, app_button) in self.windows.items() if hwnd not in inactive_hwnds}
-        print(len(self.windows)+1)
 
-    def enum_windows(self, hwnd, lParam): #Gets all opened windows and filters them
+        for hwnd in inactive_hwnds:
+            app_name, app_button, tooltip = self.windows.pop(hwnd)
+            app_button.destroy()
+            tooltip.widget.destroy()
+
+        self.windows = {hwnd: (app_name, app_button, tooltip) for hwnd, (app_name, app_button, tooltip) in self.windows.items() if hwnd not in inactive_hwnds}
+        #print(len(self.windows)+1)
+
+    def enum_windows(self, hwnd, lParam):
         if win32gui.IsWindowVisible(hwnd) and self.is_taskbar_window(hwnd):
             app_name = win32gui.GetWindowText(hwnd)
             if app_name and "Microsoft Text Input Application" not in app_name and "Windows Input Experience" not in app_name:
-                self.create_application(app_name, hwnd)
+                process_id = win32process.GetWindowThreadProcessId(hwnd)
+                try:
+                    process = psutil.Process(process_id[1])
+                    exe_path = process.exe()
+                    #print(exe_path)
+                    self.create_application(app_name, hwnd, exe_path)
+                except psutil.NoSuchProcess:
+                    # Handle the case where the process is no longer available
+                    pass
 
     def is_taskbar_window(self, hwnd):
         if win32gui.GetWindow(hwnd, win32con.GW_OWNER) != 0:
@@ -300,5 +350,5 @@ class Taskbar(tk.Tk):
         hWnd = windll.user32.GetForegroundWindow()
         blur(hWnd,hexColor="#1d1d1d",Acrylic=True,Dark=True)
 
-    
-
+    def refresh_taskbar_pass(self):
+        self.parent.refresh_taskbar()
