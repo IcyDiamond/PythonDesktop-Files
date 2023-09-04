@@ -132,10 +132,11 @@ class Taskbar(tk.Tk):
         self.apply_blur()
         images_dir = os.path.dirname(os.path.abspath(__file__))
         images_dir = os.path.join(f"{images_dir}\\assets")
-        self.img= ImageTk.PhotoImage(Image.open(os.path.join(f"{images_dir}\\StartButton.png")))
-        self.app_icon= ImageTk.PhotoImage(Image.open(os.path.join(f"{images_dir}\\GenericApp.png")))
+        self.img = ImageTk.PhotoImage(Image.open(os.path.join(f"{images_dir}\\StartButton.png")))
+        self.app_icon = ImageTk.PhotoImage(Image.open(os.path.join(f"{images_dir}\\GenericApp.png")))
 
-        
+        self.windows = {}
+
         start_button = self.app.taskbar.create_image(0, 0, anchor="nw", image=self.img)
         self.clock = self.app.taskbar.create_text(self.monitor_width-120, 0, text="00:00", anchor="nw",fill = "white", font=('Arial', 11, 'bold'))
 
@@ -144,98 +145,53 @@ class Taskbar(tk.Tk):
         self.app.bind("<Leave>", self.leave)
         
         self.update_clock()
-        self.set_taskbar_icons()
+        self.auto_update()
 
-    def get_all_apps(self):
-        all_windows = pwc.getAllWindows()
-
-        all_apps = []
-
-        for win in all_windows:
-            if not any([win.isActive, win.isMaximized, win.isMinimized]):
-                continue
-            all_apps.append(win)
-
-        return all_apps
-
-    def get_app_path(self, window):
-        try:
-            hwnd = window._hWnd
-            _, pid = win32process.GetWindowThreadProcessId(hwnd)
-            process = psutil.Process(pid)
-            return process.exe()
-        except psutil.NoSuchProcess:
-            return None
+    def auto_update(self):
+        win32gui.EnumWindows(self.enum_windows, None)
+        self.delete_applications()
+        self.app.taskbar.after(1000, self.auto_update)
         
-    def get_icon(self, path):
-        try:
-            ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
-            ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
 
-            # Extract the large system icon
-            large, small = win32gui.ExtractIconEx(path, 0)
+    def create_application(self, app_name, hwnd):
+        if hwnd in self.windows:
+            _, app_button = self.windows[hwnd]
+            app_button.config(text=app_name)  # Update the text on the button
+        else:
+            app_button = tk.Button(self.app.taskbar, text=app_name, bg='black', fg='white', wraplength=80, borderwidth=0, command=lambda name=app_name: self.focus_application(name))
+            app_button.place(x=(len(self.windows)*100)+60)
+            print(len(self.windows)+1)
+        self.windows[hwnd] = (app_name, app_button)
 
-            # Create a compatible device context
-            hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
-            hbmp = win32ui.CreateBitmap()
-            hbmp.CreateCompatibleBitmap(hdc, ico_x, ico_x)
-            hdc = hdc.CreateCompatibleDC()
+    def delete_applications(self):
+        active_hwnds = set()
+        win32gui.EnumWindows(lambda hwnd, _: active_hwnds.add(hwnd), None)
+        inactive_hwnds = [hwnd for hwnd in self.windows.keys() if hwnd not in active_hwnds]
+        for hwnd in inactive_hwnds:
+            app_name, app_button = self.windows.pop(hwnd)
+            app_button.destroy()
+            
+        self.windows = {hwnd: (app_name, app_button) for hwnd, (app_name, app_button) in self.windows.items() if hwnd not in inactive_hwnds}
+        print(len(self.windows)+1)
 
-            hdc.SelectObject(hbmp)
-            hdc.DrawIcon((0, 0), large[0])
+    def enum_windows(self, hwnd, lParam): #Gets all opened windows and filters them
+        if win32gui.IsWindowVisible(hwnd) and self.is_taskbar_window(hwnd):
+            app_name = win32gui.GetWindowText(hwnd)
+            if app_name and "Microsoft Text Input Application" not in app_name and "Windows Input Experience" not in app_name:
+                self.create_application(app_name, hwnd)
 
-            # Save the icon as a file
-            hbmp.SaveBitmapFile(hdc, 'icon.ico')
+    def is_taskbar_window(self, hwnd):
+        if win32gui.GetWindow(hwnd, win32con.GW_OWNER) != 0:
+            return False
+        if win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE) & win32con.WS_EX_TOOLWINDOW:
+            return False
+        return True
 
-            # Load the saved icon using PIL
-            icon_image = Image.open('icon.ico')
-
-            # Convert the image to RGBA format
-            icon_image = icon_image.convert("RGBA")
-
-            # Create a transparent mask by setting black pixels to transparent
-            data = icon_image.getdata()
-            new_data = []
-            for item in data:
-                # Set black pixels (RGB < 10) to transparent
-                if item[0] < 10 and item[1] < 10 and item[2] < 10:
-                    new_data.append((item[0], item[1], item[2], 0))  # Set alpha to 0 for black pixels
-                else:
-                    new_data.append(item)
-
-            # Update the image with the transparent mask
-            icon_image.putdata(new_data)
-
-            # Convert the image to Tkinter-compatible format
-            icon_tk = ImageTk.PhotoImage(icon_image)
-        except:
-            icon_tk = self.app_icon
-        return icon_tk
-        
-    def set_taskbar_icons(self):
-        all_apps = self.get_all_apps()
-        space = 0
-
-        for app in all_apps:
-            space += 50
-            app_path = self.get_app_path(app)
-            if app_path:
-                icon = self.get_icon(app_path)
-                if icon:
-                    self.taskbar_app = self.app.taskbar.create_image(space, 4, anchor="nw", image=icon)
-                else:
-                    self.taskbar_app = self.app.taskbar.create_image(space, 4, anchor="nw", image=self.app_icon)
-            self.taskbar_icons.append((icon, self.taskbar_app))
-            ToolTip(self.app, self.taskbar_app, app.title)
-
-        self.app.taskbar.after(1000, self.refresh_icons)
-          
-    def refresh_icons(self):
-        for image in self.taskbar_icons:
-            tk_image, taskbar_app = image
-            self.app.taskbar.delete(taskbar_app)
-            self.app.taskbar.delete(tk_image)
-        self.set_taskbar_icons()
+    def focus_application(self, app_name):
+        hwnd = win32gui.FindWindow(None, app_name)
+        if hwnd:
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            win32gui.SetForegroundWindow(hwnd)
 
     def update_clock(self):
         if Settings.twentyfour_hour == True:
@@ -344,8 +300,5 @@ class Taskbar(tk.Tk):
         hWnd = windll.user32.GetForegroundWindow()
         blur(hWnd,hexColor="#1d1d1d",Acrylic=True,Dark=True)
 
-    def refresh_taskbar_pass(self):
-        ToolTip.delete(self)
-        self.parent.refresh_taskbar()
     
 
