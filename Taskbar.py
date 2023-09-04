@@ -208,7 +208,7 @@ class Taskbar(tk.Tk):
 
             # Convert the image to Tkinter-compatible format
             icon_tk = ImageTk.PhotoImage(icon_image)
-        except IndexError:
+        except:
             icon_tk = self.app_icon
         return icon_tk
         
