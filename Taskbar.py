@@ -95,6 +95,7 @@ class Taskbar(tk.Tk):
         self.taskbar_active = True
         #Settings
 
+        self.drag_data = {'x': 0, 'y': 0, 'item': None}  # Initialize drag data
         self.taskbarsize += 1
         
         self.monitors = get_monitors()
@@ -131,10 +132,10 @@ class Taskbar(tk.Tk):
         self.app.taskbar.pack(expand="true",fill=tk.BOTH)
         
         self.apply_blur()
-        images_dir = os.path.dirname(os.path.abspath(__file__))
-        images_dir = os.path.join(f"{images_dir}\\assets")
-        self.img = ImageTk.PhotoImage(Image.open(os.path.join(f"{images_dir}\\StartButton.png")))
-        self.app_icon = ImageTk.PhotoImage(Image.open(os.path.join(f"{images_dir}\\GenericApp.png")))
+        self.images_dir = os.path.dirname(os.path.abspath(__file__))
+        self.images_dir = os.path.join(f"{self.images_dir}\\assets")
+        self.img = ImageTk.PhotoImage(Image.open(os.path.join(f"{self.images_dir}\\StartButton.png")))
+        self.app_icon = ImageTk.PhotoImage(Image.open(os.path.join(f"{self.images_dir}\\GenericApp.png")))
 
         self.windows = {}
         self.image_cache = {}
@@ -143,7 +144,8 @@ class Taskbar(tk.Tk):
         self.clock = self.app.taskbar.create_text(self.monitor_width-120, 0, text="00:00", anchor="nw",fill = "white", font=('Arial', 11, 'bold'))
 
         self.app.taskbar.grid_rowconfigure(0, weight=1)  # Allow buttons to expand horizontally
-        self.windows_frame = tk.Frame(self.app.taskbar, bg='black')
+        self.windows_frame = tk.Frame(self.app.taskbar, bg="white", width=600)
+        self.windows_frame.grid_propagate(False)
         self.windows_frame.place(x=40)
 
         self.app.taskbar.tag_bind(start_button, "<Button-1>", self.app.start.call)
@@ -165,30 +167,53 @@ class Taskbar(tk.Tk):
             app_button.config(text=app_name)  # Update the text on the button
             self.update_application_name(hwnd, app_name)
         else:
-            ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
-            ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
+            try:
+                ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
+                ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
 
-            large, small = win32gui.ExtractIconEx(exe_path,0)
-            win32gui.DestroyIcon(small[0])
+                large, small = win32gui.ExtractIconEx(exe_path,0)
+                win32gui.DestroyIcon(small[0])
 
-            hdc = win32ui.CreateDCFromHandle( win32gui.GetDC(0) )
-            hbmp = win32ui.CreateBitmap()
-            hbmp.CreateCompatibleBitmap( hdc, ico_x, ico_x )
-            hdc = hdc.CreateCompatibleDC()
+                hdc = win32ui.CreateDCFromHandle( win32gui.GetDC(0) )
+                hbmp = win32ui.CreateBitmap()
+                hbmp.CreateCompatibleBitmap( hdc, ico_x, ico_x )
+                hdc = hdc.CreateCompatibleDC()
 
-            hdc.SelectObject( hbmp )
-            hdc.DrawIcon( (0,0), large[0] )
+                hdc.SelectObject( hbmp )
+                hdc.DrawIcon( (0,0), large[0] )
 
-            hbmp.SaveBitmapFile( hdc, 'icon.bmp')
+                hbmp.SaveBitmapFile( hdc, 'icon.bmp')
+            except IndexError:
+                self.app_icon = Image.open(os.path.join(f"{self.images_dir}\\GenericApp.png")).save('icon.bmp')
 
             icon_image = Image.open('icon.bmp')
 
+            # Convert the image to RGBA format
+            icon_image = icon_image.convert("RGBA")
+
+            # Create a transparent mask by setting black pixels to transparent
+            data = icon_image.getdata()
+            new_data = []
+            for item in data:
+                # Set black pixels (RGB < 10) to transparent
+                if item[0] < 10 and item[1] < 10 and item[2] < 10:
+                    new_data.append((item[0], item[1], item[2], 0))  # Set alpha to 0 for black pixels
+                else:
+                    new_data.append(item)
+
+            # Update the image with the transparent mask
+            icon_image.putdata(new_data)
+
             # Create and store the ImageTk.PhotoImage object
+            icon_image = icon_image.resize((26,26))
             photo = ImageTk.PhotoImage(icon_image)
             self.image_cache[hwnd] = photo
 
-            app_button = tk.Button(self.windows_frame, text=app_name, bg='black', fg='white', wraplength=80, borderwidth=0, image=photo, command=lambda name=app_name: self.focus_application(name))
-            app_button.pack(side='left', padx=5)
+            app_button = tk.Button(self.windows_frame, text=app_name, bg="#1d1d1d", fg="#1d1d1d", wraplength=80, borderwidth=0, relief='solid', image=photo, command=lambda name=app_name: self.focus_application(name))
+            app_button.bind('<ButtonPress-1>', self.on_button_press)
+            app_button.bind('<B1-Motion>', self.on_button_drag)
+            app_button.bind('<ButtonRelease-1>', self.on_button_release)
+            app_button.pack(side='left', padx=11, pady=6)
 
             # Create a tooltip for the button
             tooltip = ToolTip(app_button, app_name)
@@ -242,6 +267,30 @@ class Taskbar(tk.Tk):
         if hwnd:
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
             win32gui.SetForegroundWindow(hwnd)
+
+    def on_button_press(self, event):
+        widget = event.widget
+        self.drag_data['item'] = widget
+        self.drag_data['x'] = event.x
+        self.drag_data['y'] = event.y
+        print(self.drag_data)
+
+    def on_button_drag(self, event):
+        x = event.x_root
+        self.drag_data['item'].place(x=x-40, y=6)
+        print(x)
+
+    def on_button_release(self, event):
+        # Determine the new order of buttons based on their current positions
+        new_order = sorted(self.windows.keys(), key=lambda hwnd: self.windows[hwnd][1].winfo_x())
+
+        # Update the order of buttons in self.windows
+        self.windows = {hwnd: self.windows[hwnd] for hwnd in new_order}
+
+        # Perform any additional actions needed when a button is released
+        # For example, save the new order to configuration if required
+
+        self.drag_data['item'] = None
 
     def update_clock(self):
         if Settings.twentyfour_hour == True:

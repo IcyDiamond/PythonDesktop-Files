@@ -9,7 +9,7 @@ import subprocess
 
 
 # Define your GitHub repository URL and the version tracking file URL
-repo = 'main' # Currently only "main" or "Dev-Test"
+repo = 'Dev-Test' # Currently only "main" or "Dev-Test"
 authors = "IcyDiamond"
 if repo == 'main':
     temp_repo = 'Main'
@@ -27,8 +27,8 @@ try:
             if "update_version =" in line:
                 value = line.split("update_version = ")[1]
                 value = value.replace("\r","")
-                ver1 = float(value)
-                current_version = ver1
+                current_version = value
+                current_version = value
                 break
 except FileNotFoundError:
     current_version='Null'
@@ -40,8 +40,7 @@ if response.status_code == 200:
         if "update_version =" in line:
             value = line.split("update_version = ")[1]
             value = value.replace("\r","")
-            ver1 = float(value)
-            latest_version = ver1
+            latest_version = value
             break
 
     if current_version != latest_version:
