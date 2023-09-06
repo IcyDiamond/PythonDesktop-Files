@@ -139,13 +139,15 @@ class Taskbar(tk.Tk):
 
         self.windows = {}
         self.image_cache = {}
+        self.apps_focused = []
+        self.icon_movement = False
 
         start_button = self.app.taskbar.create_image(0, 0, anchor="nw", image=self.img)
         self.clock = self.app.taskbar.create_text(self.monitor_width-120, 0, text="00:00", anchor="nw",fill = "white", font=('Arial', 11, 'bold'))
 
         self.app.taskbar.grid_rowconfigure(0, weight=1)  # Allow buttons to expand horizontally
-        self.windows_frame = tk.Frame(self.app.taskbar, bg="white", width=600)
-        self.windows_frame.grid_propagate(False)
+        self.windows_frame = tk.Frame(self.app.taskbar, bg="#1d1d1d", width=self.monitor_width-40-120, height=40)
+        self.windows_frame.pack_propagate(0)
         self.windows_frame.place(x=40)
 
         self.app.taskbar.tag_bind(start_button, "<Button-1>", self.app.start.call)
@@ -209,12 +211,11 @@ class Taskbar(tk.Tk):
             photo = ImageTk.PhotoImage(icon_image)
             self.image_cache[hwnd] = photo
 
-            app_button = tk.Button(self.windows_frame, text=app_name, bg="#1d1d1d", fg="#1d1d1d", wraplength=80, borderwidth=0, relief='solid', image=photo, command=lambda name=app_name: self.focus_application(name))
+            app_button = tk.Button(self.windows_frame, text=app_name, bg="#1d1d1d", fg="#1d1d1d", wraplength=80, borderwidth=0, relief='solid', image=photo, )
             app_button.bind('<ButtonPress-1>', self.on_button_press)
             app_button.bind('<B1-Motion>', self.on_button_drag)
-            app_button.bind('<ButtonRelease-1>', self.on_button_release)
+            app_button.bind('<ButtonRelease-1>', lambda event,: self.on_button_release(event, hwnd))
             app_button.pack(side='left', padx=11, pady=6)
-
             # Create a tooltip for the button
             tooltip = ToolTip(app_button, app_name)
 
@@ -244,16 +245,24 @@ class Taskbar(tk.Tk):
     def enum_windows(self, hwnd, lParam):
         if win32gui.IsWindowVisible(hwnd) and self.is_taskbar_window(hwnd):
             app_name = win32gui.GetWindowText(hwnd)
-            if app_name and "Microsoft Text Input Application" not in app_name and "Windows Input Experience" not in app_name:
-                process_id = win32process.GetWindowThreadProcessId(hwnd)
-                try:
-                    process = psutil.Process(process_id[1])
-                    exe_path = process.exe()
-                    #print(exe_path)
-                    self.create_application(app_name, hwnd, exe_path)
-                except psutil.NoSuchProcess:
-                    # Handle the case where the process is no longer available
-                    pass
+            
+            # Get the process ID of the current Python script
+            current_pid = os.getpid()
+            
+            # Get the process ID of the window we're currently processing
+            process_id = win32process.GetWindowThreadProcessId(hwnd)[1]
+            
+            # Check if the window belongs to the same process as the script
+            if process_id != current_pid:
+                if app_name and "Microsoft Text Input Application" not in app_name and "Windows Input Experience" not in app_name:
+                    try:
+                        process = psutil.Process(process_id)
+                        exe_path = process.exe()
+                        #print(exe_path)
+                        self.create_application(app_name, hwnd, exe_path)
+                    except psutil.NoSuchProcess:
+                        # Handle the case where the process is no longer available
+                        pass
 
     def is_taskbar_window(self, hwnd):
         if win32gui.GetWindow(hwnd, win32con.GW_OWNER) != 0:
@@ -262,35 +271,48 @@ class Taskbar(tk.Tk):
             return False
         return True
 
-    def focus_application(self, app_name):
-        hwnd = win32gui.FindWindow(None, app_name)
-        if hwnd:
+    def focus_application(self, hwnd):
+        if self.icon_movement == True or not hwnd:
+            return
+        
+        tup = win32gui.GetWindowPlacement(hwnd)
+        if tup[1] == win32con.SW_SHOWMAXIMIZED:
+            win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+
+        elif tup[1] == win32con.SW_SHOWMINIMIZED:
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
             win32gui.SetForegroundWindow(hwnd)
+        elif tup[1] == win32con.SW_SHOWNORMAL:
+            win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
 
     def on_button_press(self, event):
         widget = event.widget
         self.drag_data['item'] = widget
         self.drag_data['x'] = event.x
         self.drag_data['y'] = event.y
-        print(self.drag_data)
+        #print(self.drag_data)
 
     def on_button_drag(self, event):
+        self.icon_movement = True
         x = event.x_root
-        self.drag_data['item'].place(x=x-40, y=6)
-        print(x)
+        if x > 40 and x < self.monitor_width-120-26:
+            self.drag_data['item'].place(x=x-40, y=6)
 
-    def on_button_release(self, event):
+    def on_button_release(self, event, hwnd):
         # Determine the new order of buttons based on their current positions
         new_order = sorted(self.windows.keys(), key=lambda hwnd: self.windows[hwnd][1].winfo_x())
-
-        # Update the order of buttons in self.windows
-        self.windows = {hwnd: self.windows[hwnd] for hwnd in new_order}
-
-        # Perform any additional actions needed when a button is released
-        # For example, save the new order to configuration if required
+        
+        if hwnd is not None:
+            # Update the order of buttons in self.windows
+            self.windows = {hwnd: self.windows[hwnd] for hwnd in new_order}
+            for window in self.windows:
+                _, app_button, tooltip = self.windows[window]
+                app_button.pack_forget()
+                app_button.pack(side='left', padx=11, pady=6)
 
         self.drag_data['item'] = None
+        self.focus_application(hwnd)
+        self.icon_movement = False
 
     def update_clock(self):
         if Settings.twentyfour_hour == True:

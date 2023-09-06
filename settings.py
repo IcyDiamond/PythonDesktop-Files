@@ -54,6 +54,12 @@ class Setting_Menu():
         self.add_blur_var.set(False)
         self.add_blur_checkbox = tk.Checkbutton(self.window, text="Add Blur (WIP)", variable=self.add_blur_var, state=tk.DISABLED)
         self.add_blur_checkbox.pack()
+
+        # Add Badge Checkbox (WIP)
+        self.add_blur_var = tk.BooleanVar()
+        self.add_blur_var.set(False)
+        self.add_blur_checkbox = tk.Checkbutton(self.window, text="Show Badges on Taskbar Buttons (WIP)", variable=self.add_blur_var, state=tk.DISABLED)
+        self.add_blur_checkbox.pack()
         
         # Save Button
         self.save_button = tk.Button(self.window, text="Save", command=self.save_settings)
