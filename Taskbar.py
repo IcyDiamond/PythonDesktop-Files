@@ -2,6 +2,7 @@ from BlurWindow.blurWindow import blur
 from screeninfo import get_monitors
 from PIL import Image, ImageTk
 from settings import Settings
+from threading import Thread
 from menu import Startmenu
 from ctypes import windll
 import pywinctl as pwc
@@ -140,6 +141,7 @@ class Taskbar(tk.Tk):
         self.windows = {}
         self.image_cache = {}
         self.apps_focused = []
+        self.focused_list = [0,0]
         self.icon_movement = False
 
         start_button = self.app.taskbar.create_image(0, 0, anchor="nw", image=self.img)
@@ -156,12 +158,22 @@ class Taskbar(tk.Tk):
         
         self.update_clock()
         self.auto_update()
+        self.focus_list_get()
 
+    def focus_list_get(self):
+        current_focused_app = win32gui.GetForegroundWindow()
+        if current_focused_app == self.focused_list[1]:
+            pass
+        else:
+            if len(self.focused_list)+1 >= 3:
+                self.focused_list.pop(0)
+            self.focused_list.append(current_focused_app)
+        self.app.taskbar.after(500,self.focus_list_get)
+            
     def auto_update(self):
         win32gui.EnumWindows(self.enum_windows, None)
         self.delete_applications()
         self.app.taskbar.after(1000, self.auto_update)
-        
 
     def create_application(self, app_name, hwnd, exe_path):
         if hwnd in self.windows:
@@ -277,13 +289,19 @@ class Taskbar(tk.Tk):
         
         tup = win32gui.GetWindowPlacement(hwnd)
         if tup[1] == win32con.SW_SHOWMAXIMIZED:
-            win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
-
+            if hwnd in self.focused_list:
+                win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+            else:
+                win32gui.SetForegroundWindow(hwnd)
         elif tup[1] == win32con.SW_SHOWMINIMIZED:
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
             win32gui.SetForegroundWindow(hwnd)
         elif tup[1] == win32con.SW_SHOWNORMAL:
-            win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+            if hwnd in self.focused_list:
+                win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+            else:
+                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                win32gui.SetForegroundWindow(hwnd)
 
     def on_button_press(self, event):
         widget = event.widget

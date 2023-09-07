@@ -15,7 +15,7 @@ import sys
 import os
 
 
-update_version = "1.1.4"
+update_version = "1.1.5"
 #threadlist = []
 #threadlist.append(Thread(target=lambda: os.system('explorer.exe &')))
 #threadlist.append(Thread(target=lambda: os.kill(os.getpid(), signal.SIGTERM)))
