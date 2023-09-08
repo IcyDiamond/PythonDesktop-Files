@@ -129,13 +129,13 @@ class Taskbar(tk.Tk):
         self.initialize_icon()
 
     def initialize_icon(self):
-        self.app.taskbar = tk.Canvas(self.app, background='#1d1d1d', height=40, highlightthickness=0)
+        self.app.taskbar = tk.Canvas(self.app, background='#1d1d1d', height=self.taskbarsize, highlightthickness=0)
         self.app.taskbar.pack(expand="true",fill=tk.BOTH)
         
         self.apply_blur()
         self.images_dir = os.path.dirname(os.path.abspath(__file__))
         self.images_dir = os.path.join(f"{self.images_dir}\\assets")
-        self.img = ImageTk.PhotoImage(Image.open(os.path.join(f"{self.images_dir}\\StartButton.png")))
+        self.start_img = ImageTk.PhotoImage(Image.open(os.path.join(f"{self.images_dir}\\StartButton.png")).resize((self.taskbarsize,self.taskbarsize)))
         self.app_icon = ImageTk.PhotoImage(Image.open(os.path.join(f"{self.images_dir}\\GenericApp.png")))
 
         self.windows = {}
@@ -144,13 +144,13 @@ class Taskbar(tk.Tk):
         self.focused_list = [0,0]
         self.icon_movement = False
 
-        start_button = self.app.taskbar.create_image(0, 0, anchor="nw", image=self.img)
+        start_button = self.app.taskbar.create_image(0, 0, anchor="nw", image=self.start_img)
         self.clock = self.app.taskbar.create_text(self.monitor_width-120, 0, text="00:00", anchor="nw",fill = "white", font=('Arial', 11, 'bold'))
 
         self.app.taskbar.grid_rowconfigure(0, weight=1)  # Allow buttons to expand horizontally
-        self.windows_frame = tk.Frame(self.app.taskbar, bg="#1d1d1d", width=self.monitor_width-40-120, height=40)
+        self.windows_frame = tk.Frame(self.app.taskbar, bg="#1d1d1d", width=self.monitor_width-self.taskbarsize-120, height=self.taskbarsize)
         self.windows_frame.pack_propagate(0)
-        self.windows_frame.place(x=40)
+        self.windows_frame.place(x=self.taskbarsize)
 
         self.app.taskbar.tag_bind(start_button, "<Button-1>", self.app.start.call)
         self.app.bind("<Enter>", self.enter)
@@ -313,8 +313,8 @@ class Taskbar(tk.Tk):
     def on_button_drag(self, event):
         self.icon_movement = True
         x = event.x_root
-        if x > 40 and x < self.monitor_width-120-26:
-            self.drag_data['item'].place(x=x-40, y=6)
+        if x > self.taskbarsize and x < self.monitor_width-120-26:
+            self.drag_data['item'].place(x=x-self.taskbarsize, y=6)
 
     def on_button_release(self, event, hwnd):
         # Determine the new order of buttons based on their current positions

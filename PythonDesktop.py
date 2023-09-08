@@ -402,7 +402,7 @@ class Desktop_screen:
 
         #wallpaper
         self.icon_photo = PhotoImage(file=os.path.join(variables.icon_images, "UnknownIcon_Medium.png"))
-        self.wallpaper = ImageTk.PhotoImage(Image.open(os.path.join(f"{variables.current_directory}\\Windows\\Web\\Wallpaper\\Wallpaper.jpg")))
+        self.wallpaper = ImageTk.PhotoImage(Image.open(os.path.join(f"{variables.current_directory}\\Windows\\Web\\Wallpaper\\Wallpaper.jpg")).resize((self.monitor_width, self.monitor_height)))
         self.folders = ImageTk.PhotoImage(Image.open(os.path.join(variables.icon_images, "Folder_medium.png")))
         self.desktop = tk.Canvas(self.master.desktop_frame, bg="black", highlightthickness=0)
         self.desktop.pack(side=LEFT,fill=BOTH, expand=True)
@@ -412,6 +412,14 @@ class Desktop_screen:
         #icons
         initialized = False
         self.icon_size_var_set = 'medium'
+
+        self.start_x = 0
+        self.start_y = 0
+        self.rect = None
+
+        self.desktop.bind('<ButtonPress-1>', self.on_press)
+        self.desktop.bind('<B1-Motion>', self.on_drag)
+        self.desktop.bind('<ButtonRelease-1>', self.on_release)
         
         self.icon_size(self.max, self.size, self.height, self.add, initialized)
         
@@ -502,6 +510,28 @@ class Desktop_screen:
         self.icon_menu.add_command(label="Rename")
         self.icon_menu.add_separator()
         self.icon_menu.add_command(label="Properties")
+
+    def on_press(self, event):
+        self.start_x = event.x_root
+        self.start_y = event.y_root
+        self.rect = self.desktop.create_rectangle(
+            self.start_x, self.start_y, self.start_x, self.start_y,
+            outline='blue', fill='blue', stipple='gray25'
+        )
+
+    def on_drag(self, event):
+        if self.rect:
+            current_x = event.x_root
+            current_y = event.y_root
+            self.desktop.coords(self.rect, self.start_x, self.start_y, current_x, current_y)
+
+    def on_release(self, event):
+        if self.rect:
+            self.desktop.delete(self.rect)
+            selected_area = (
+                self.start_x, self.start_y, event.x_root, event.y_root
+            )
+            print(f"Selected Area: {selected_area}")
 
     def set_icon_size(self):
         # Get the selected icon size
@@ -730,7 +760,7 @@ class Desktop_screen:
             text = self.desktop.create_text(icon_x,
                                         icon_y + 30 + (self.add*2+self.add//2),
                                         text=files[:15] + "..." if len(files) > 15 else files,
-                                        anchor="n", font=("Arial", 11))
+                                        anchor="n", font=("Arial", 11), fill='#ffffff')
             
             self.desktop.itemconfig(text, state=view)
 
