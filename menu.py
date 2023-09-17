@@ -44,7 +44,7 @@ class Startmenu(tk.Tk):
         self.side_bar_active = False
 
         images_dir = os.path.dirname(os.path.abspath(__file__))
-        images_dir = os.path.join(f"{images_dir}\\assets")
+        images_dir = os.path.join(f"{images_dir}\\Windows\\system32")
         self.menu = tk.PhotoImage(file=os.path.join(f"{images_dir}\\Menu.png"))
         self.document = tk.PhotoImage(file=os.path.join(f"{images_dir}\\Document.png"))
         self.account = tk.PhotoImage(file=os.path.join(f"{images_dir}\\DefaultProfileImage.png"))

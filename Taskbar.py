@@ -3,6 +3,7 @@ from screeninfo import get_monitors
 from PIL import Image, ImageTk
 from settings import Settings
 from threading import Thread
+from pywintypes import error
 from menu import Startmenu
 from ctypes import windll
 import pywinctl as pwc
@@ -133,10 +134,10 @@ class Taskbar(tk.Tk):
         self.app.taskbar.pack(expand="true",fill=tk.BOTH)
         
         self.apply_blur()
-        self.images_dir = os.path.dirname(os.path.abspath(__file__))
-        self.images_dir = os.path.join(f"{self.images_dir}\\assets")
-        self.start_img = ImageTk.PhotoImage(Image.open(os.path.join(f"{self.images_dir}\\StartButton.png")).resize((self.taskbarsize,self.taskbarsize)))
-        self.app_icon = ImageTk.PhotoImage(Image.open(os.path.join(f"{self.images_dir}\\GenericApp.png")))
+        self.assets = os.path.dirname(os.path.abspath(__file__))
+        self.assets = os.path.join(f"{self.assets}\\Windows\\system32")
+        self.start_img = ImageTk.PhotoImage(Image.open(os.path.join(f"{self.assets}\\StartButton.png")).resize((self.taskbarsize,self.taskbarsize)))
+        self.app_icon = ImageTk.PhotoImage(Image.open(os.path.join(f"{self.assets}\\GenericApp.png")))
 
         self.windows = {}
         self.image_cache = {}
@@ -197,8 +198,8 @@ class Taskbar(tk.Tk):
                 hdc.DrawIcon( (0,0), large[0] )
 
                 hbmp.SaveBitmapFile( hdc, 'icon.bmp')
-            except IndexError:
-                self.app_icon = Image.open(os.path.join(f"{self.images_dir}\\GenericApp.png")).save('icon.bmp')
+            except (IndexError, error):
+                self.app_icon = Image.open(os.path.join(f"{self.assets}\\GenericApp.png")).save('icon.bmp')
 
             icon_image = Image.open('icon.bmp')
 
