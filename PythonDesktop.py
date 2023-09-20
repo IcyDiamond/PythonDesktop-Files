@@ -15,7 +15,7 @@ import sys
 import os
 
 
-update_version = "1.2.1"
+update_version = "1.1.6"
 #threadlist = []
 #threadlist.append(Thread(target=lambda: os.system('explorer.exe &')))
 #threadlist.append(Thread(target=lambda: os.kill(os.getpid(), signal.SIGTERM)))
@@ -376,9 +376,8 @@ class Desktop_screen:
         self.monitor_height = variables.monitor_height
         self.monitor_width = variables.monitor_width
         
-        self.max = 900
-        self.size = 100
-        self.height = 50
+        self.icon_numsize = 100
+        self.height = 54
         self.add = 0
 
     def initialize_taskbar(self):
@@ -402,29 +401,43 @@ class Desktop_screen:
         #wallpaper
         self.icon_photo = PhotoImage(file=os.path.join(variables.assets, "UnknownIcon_Medium.png"))
         self.wallpaper = ImageTk.PhotoImage(Image.open(os.path.join(f"{variables.current_directory}\\Windows\\Web\\Wallpaper\\Wallpaper.jpg")).resize((self.monitor_width, self.monitor_height)))
-        self.folders = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Folder_medium.png")))
-        self.none_selection = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Empty_Icon_Selection.png")).resize((76,54)))
-        self.hover_selection = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Hover_Icon_Selection.png")).resize((76,54)))
-        self.clicked_selection = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Clicked_Icon_Selection.png")).resize((76,54)))
+        self.folders_small = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Folder_Small.png")))
+        self.folders_medium = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Folder_Medium.png")))
+        self.folders_large = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Folder_Large.png")))
+        self.none_selection_small = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Empty_Icon_Selection.png")).resize((76,54)))
+        self.none_selection_medium = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Empty_Icon_Selection.png")).resize((76,70)))
+        self.none_selection_large = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Empty_Icon_Selection.png")).resize((106,118)))
+        self.hover_selection_small = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Hover_Icon_Selection.png")).resize((76,54)))
+        self.hover_selection_medium = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Hover_Icon_Selection.png")).resize((76,70)))
+        self.hover_selection_large = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Hover_Icon_Selection.png")).resize((106,118)))
+        self.clicked_selection_small = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Clicked_Icon_Selection.png")).resize((76,54)))
+        self.clicked_selection_medium = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Clicked_Icon_Selection.png")).resize((76,70)))
+        self.clicked_selection_large = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Clicked_Icon_Selection.png")).resize((106,118)))
+        self.clicked_selection = self.clicked_selection_small
+        self.hover_selection = self.hover_selection_small
+        self.none_selection = self.none_selection_small
+        self.folders = self.folders_small
         self.desktop = tk.Canvas(self.master.desktop_frame, bg="black", highlightthickness=0)
         self.desktop.pack(side=LEFT,fill=BOTH, expand=True)
         self.desktop.create_image(0, 0, image = self.wallpaper, anchor = NW)
 
 
         #icons
-        initialized = False
         self.icon_size_var_set = 'small'
+        self.selected_base = None
+        self.icon_movement = False
+        self.icon_focused = False
 
         self.start_x = 0
         self.start_y = 0
         self.max_text_width = 68
         self.rect = None
 
-        #self.desktop.bind('<ButtonPress-1>', self.on_press)
-        #self.desktop.bind('<B1-Motion>', self.on_drag)
-        #self.desktop.bind('<ButtonRelease-1>', self.on_release)
+        self.desktop.bind('<ButtonPress-1>', self.on_press)
+        self.desktop.bind('<B1-Motion>', self.on_drag)
+        self.desktop.bind('<ButtonRelease-1>', self.on_release)
         
-        self.icon_size(self.max, self.size, self.height, self.add, initialized)
+        self.place_icons()
         
         #----------------------------------------Work in progress (context menu)--------------------------------------------------------------------
 
@@ -439,7 +452,7 @@ class Desktop_screen:
         self.icon_size_var = tk.StringVar()
         self.icon_size_var.set("small")
         self.align_grid_var.set(True)
-        self.view_icons_var.set(True)#                                                          max 600 for laptops
+        self.view_icons_var.set(True)
         self.desktop_submenu.add_radiobutton(label="Large icons", variable=self.icon_size_var,
                                              value="large", command=self.set_icon_size)
         self.desktop_submenu.add_radiobutton(label="Medium icons", variable=self.icon_size_var,
@@ -517,37 +530,52 @@ class Desktop_screen:
     def on_press(self, event):
         self.start_x = event.x_root
         self.start_y = event.y_root
+        for base, __ in self.icon_dict.items():
+            self.desktop.itemconfig(base+"base", image=self.none_selection)
+        if self.icon_focused == False:
+            self.desktop.itemconfig(self.selected_base, image=self.clicked_selection)
         self.rect = self.desktop.create_rectangle(
             self.start_x, self.start_y, self.start_x, self.start_y,
             outline='blue', fill='blue', stipple='gray25'
         )
+        
 
     def on_drag(self, event):
         if self.rect:
             current_x = event.x_root
             current_y = event.y_root
-            self.desktop.coords(self.rect, self.start_x, self.start_y, current_x, current_y)
+            if not self.icon_movement:
+                for base, values_list in self.icon_dict.items():
+                    for i in values_list:
+                        icon_x = values_list[0]
+                        icon_y = values_list[1]
+                        if ((icon_x < self.start_x and icon_x > event.x_root) or (icon_x > self.start_x and icon_x < event.x_root)) and ((icon_y < self.start_y and icon_y > event.y_root) or (icon_y > self.start_y and icon_y < event.y_root)):
+                            self.desktop.itemconfig(base+"base", image=self.clicked_selection)
+                            break
+                        else:
+                            self.desktop.itemconfig(base+"base", image=self.none_selection)
+                            break
+
+                self.desktop.coords(self.rect, self.start_x, self.start_y, current_x, current_y)
+            else:
+                self.desktop.delete(self.rect)
 
     def on_release(self, event):
         if self.rect:
             self.desktop.delete(self.rect)
-            selected_area = (
-                self.start_x, self.start_y, event.x_root, event.y_root
-            )
-            print(f"Selected Area: {selected_area}")
 
     def set_icon_size(self):
         # Get the selected icon size
         icon_size = self.icon_size_var.get()
 
         if icon_size == "large":
-            self.icon_size(800, 140, 80, 10, False)
+            self.icon_size("large", 118, 10)
             self.icon_size_var_set = 'large'
         elif icon_size == "medium":
-            self.icon_size(900, 100, 50, 0, False)
+            self.icon_size("medium", 70, 0)
             self.icon_size_var_set = 'medium'
         elif icon_size == "small":
-            self.icon_size(900, 50, 35, -10, False)
+            self.icon_size("small", 54, -10)
             self.icon_size_var_set = 'small'
 
     def new_folder(self):
@@ -557,7 +585,7 @@ class Desktop_screen:
         if self.new_folder_copy == 0:
             files = "New Folder"
         else:
-            files = f"New Folder ({self.new_folder_copy})"
+            files = f"New Folder ({self.new_folder_copy+1})"
         if os.path.exists(f"{variables.users}\\{Auth.username}\\desktop\\{files}"):
             self.new_folder_copy += 1
             self.new_folder()
@@ -624,17 +652,16 @@ class Desktop_screen:
         finally:
             self.icon_menu.grab_release()
 
-    def icon_size(self, max, size, height, add, initialized):
-        self.icon_max = max
-        self.icon_numsize = size
+    def icon_size(self, size, height, add):
         self.height = height
         self.add = add
-        if height == 80:
+        if size == "large":
             self.icon_photo = PhotoImage(file=os.path.join(variables.assets, "UnknownIcon_Large.png"))
-            self.folders = PhotoImage(file=os.path.join(variables.assets, "Folder_large.png"))
+            self.folders = self.folders_large
+            self.none_selection = self.none_selection_large
+            self.hover_selection = self.hover_selection_large
+            self.clicked_selection = self.clicked_selection_large
 
-            if initialized:
-                return
             
             if self.icon_size_var_set == 'large':
                 pass
@@ -651,11 +678,13 @@ class Desktop_screen:
                     icon_y = round(icon_y * 1.96)
                     self.icon_dict[i] = (icon_x, icon_y)
                 
-        if height == 50:
+        if size == "medium":
             self.icon_photo = PhotoImage(file=os.path.join(variables.assets, "UnknownIcon_Medium.png"))
-            self.folders = PhotoImage(file=os.path.join(variables.assets, "Folder_medium.png"))
-            if initialized:
-                return
+            self.folders = self.folders_medium
+            self.none_selection = self.none_selection_medium
+            self.hover_selection = self.hover_selection_medium
+            self.clicked_selection = self.clicked_selection_medium
+
             if self.icon_size_var_set == 'large':
                 for i in self.icon_dict:
                     icon_x, icon_y = self.icon_dict[i]
@@ -670,11 +699,13 @@ class Desktop_screen:
                     icon_x = round(icon_x * 1.4)
                     icon_y = round(icon_y * 1.4)
                     self.icon_dict[i] = (icon_x, icon_y)
-        if height == 35:
-            self.icon_photo = PhotoImage(file=os.path.join(variables.assets, "UnknownIcon_Medium.png"))
-            self.folders = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Folder_small.png")))
-            if initialized:
-                return
+        if size == "small":
+            self.icon_photo = NONE
+            self.folders = self.folders_small
+            self.none_selection = self.none_selection_small
+            self.hover_selection = self.hover_selection_small
+            self.clicked_selection = self.clicked_selection_small
+
             if self.icon_size_var_set == 'large':
                 for i in self.icon_dict:
                     icon_x, icon_y = self.icon_dict[i]
@@ -693,10 +724,7 @@ class Desktop_screen:
         if not self.icon_dict == {}:
             self.file_dump()
 
-        self.icon_height = height
-        if not initialized:
-            self.place_icons()
-        return
+        self.place_icons()
 
     def veiw_icons(self):
         if self.view_icons_value != True:
@@ -771,12 +799,8 @@ class Desktop_screen:
 
     def place_icons(self):
         variables.refresh_var()
-        max = self.icon_max
-        size = self.icon_numsize
-        height = 35
-        add = self.add
-        icon_y = self.icon_height-add
-        icon_x = self.icon_height-add
+        icon_y = self.height-self.add #used to find spot if no location
+        icon_x = self.height-self.add #used to find spot if no location
 
         try:
             with open(f"{variables.users}\\{Auth.username}\\icon_position.json", "r") as file:
@@ -788,7 +812,6 @@ class Desktop_screen:
             self.desktop.delete(icon)
 #
         self.icon_ref = []
-        self.icon_size(max, size, height, add, True)
 #
         for files in os.listdir(variables.desktop_list):
             file_path = os.path.join(variables.desktop_list, files)
@@ -812,7 +835,7 @@ class Desktop_screen:
 
             
             if os.path.isdir(file_path):
-                self.desktop_icon_base = self.desktop.create_image(icon_x, icon_y, image=self.none_selection, tags=files.replace(' ', '/'))
+                self.desktop_icon_base = self.desktop.create_image(icon_x, icon_y, image=self.none_selection, tags=files.replace(' ', '/')+"base")
                 self.image = self.desktop.create_image(icon_x, icon_y-8, image=self.folders, tags=files.replace(' ', '/'))
         #    else:
         #        self.image = self.desktop.create_image(icon_x, icon_y, image=self.icon_photo, tags=files.replace(' ', '/'))
@@ -825,46 +848,56 @@ class Desktop_screen:
             self.desktop.itemconfig(self.image, state=view)
             self.desktop.itemconfig(text, state=view)
 #
+            self.icon_ref.append(self.desktop_icon_base)
             self.icon_ref.append(self.icon_photo)
             self.icon_ref.append(self.folders)
-            self.icon_ref.append(self.desktop_icon_base)
             self.icon_ref.append(self.image)
             self.icon_ref.append(text)
         #    
-            self.desktop.tag_bind(self.desktop_icon_base, "<Button-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_press(event, base, img, txt))
-            self.desktop.tag_bind(self.image, "<Button-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_press(event, base, img, txt))
-            self.desktop.tag_bind(text, "<Button-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_press(event, base, img, txt))
-        #    self.desktop.tag_bind(self.image, "<Button-3>", self.icon_popup)
-            self.desktop.tag_bind(self.desktop_icon_base, "<Enter>", lambda event, img=self.desktop_icon_base: self.on_icon_hover(event, img))
-            self.desktop.tag_bind(self.desktop_icon_base, "<Leave>", lambda event, img=self.desktop_icon_base: self.on_icon_leave(event, img))
-            self.desktop.tag_bind(self.image, "<Enter>", lambda event, img=self.desktop_icon_base: self.on_icon_hover(event, img))
-            self.desktop.tag_bind(self.image, "<Leave>", lambda event, img=self.desktop_icon_base: self.on_icon_leave(event, img))
-            self.desktop.tag_bind(text, "<Enter>", lambda event, img=self.desktop_icon_base: self.on_icon_hover(event, img))
-            self.desktop.tag_bind(text, "<Leave>", lambda event, img=self.desktop_icon_base: self.on_icon_leave(event, img))
-            self.desktop.tag_bind(self.desktop_icon_base, "<B1-Motion>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_move(event, base, img, txt))
-            self.desktop.tag_bind(self.image, "<B1-Motion>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_move(event, base, img, txt))
-            self.desktop.tag_bind(text, "<B1-Motion>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_move(event, base, img, txt))
             self.desktop.tag_bind(self.desktop_icon_base, "<ButtonRelease-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_release(event, base, img, txt))
+            self.desktop.tag_bind(self.desktop_icon_base, "<B1-Motion>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_move(event, base, img, txt))
+            self.desktop.tag_bind(self.desktop_icon_base, "<Button-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_press(event, base, img, txt))
+            self.desktop.tag_bind(self.desktop_icon_base, "<Enter>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_hover(event, base, img, txt))
+            self.desktop.tag_bind(self.desktop_icon_base, "<Leave>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_leave(event, base, img, txt))
             self.desktop.tag_bind(self.image, "<ButtonRelease-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_release(event, base, img, txt))
+            self.desktop.tag_bind(self.image, "<B1-Motion>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_move(event, base, img, txt))
+            self.desktop.tag_bind(self.image, "<Button-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_press(event, base, img, txt))
+            self.desktop.tag_bind(self.image, "<Enter>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_hover(event, base, img, txt))
+            self.desktop.tag_bind(self.image, "<Leave>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_leave(event, base, img, txt))
+            #self.desktop.tag_bind(self.image, "<Button-3>", self.icon_popup)
             self.desktop.tag_bind(text, "<ButtonRelease-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_release(event, base, img, txt))
+            self.desktop.tag_bind(text, "<B1-Motion>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_move(event, base, img, txt))
+            self.desktop.tag_bind(text, "<Button-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_press(event, base, img, txt))
             self.desktop.tag_bind(text, "<Double-1>", lambda event, txt=text, file=files: self.on_img_rename(event, txt, file))
+            self.desktop.tag_bind(text, "<Enter>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_hover(event, base, img, txt))
+            self.desktop.tag_bind(text, "<Leave>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_leave(event, base, img, txt))
 
             #find the next available spot 
-            if icon_y > self.icon_max:
-                icon_y = -50-(self.add*2)
-                icon_x += self.icon_numsize
-            icon_y += self.icon_numsize
+            if icon_y > self.monitor_height-40-70: #Taskbar height #used to find spot if no location 
+                icon_y = -50-(self.add*2) #useless currently (self.add) #used to find spot if no location
+                icon_x += self.icon_numsize #used to find spot if no location
+            icon_y += self.icon_numsize #used to find spot if no location
 
         self.icon_id = 0
 
-    def on_icon_hover(self, event, img):
-        self.desktop.itemconfig(img, image=self.hover_selection)
+    def on_icon_hover(self, event, base, img, txt):
+        if self.selected_base == base:
+            pass
+        else:
+            self.desktop.itemconfig(base, image=self.hover_selection)
 
-    def on_icon_leave(self, event, img):
-        self.desktop.itemconfig(img, image=self.none_selection)
+    def on_icon_leave(self, event, base, img, txt):
+        if self.selected_base == base:
+            pass
+        else:
+            self.desktop.itemconfig(base, image=self.none_selection)
 
     def on_image_press(self, event, base, img, txt):
+        self.icon_focused = True
+        if not self.selected_base == base:
+            self.desktop.itemconfig(self.selected_base, image=self.none_selection)
         self.selected_base = base
+        self.desktop.itemconfig(base, image=self.clicked_selection)
         self.desktop.configure(cursor="fleur")
         self.desktop.x = event.x
         self.desktop.y = event.y
@@ -888,6 +921,7 @@ class Desktop_screen:
     # function to handle the move event
     def on_image_move(self, event, base, img, txt):
         if self.selected_base == base:
+            self.icon_movement = True
             x, y = (event.x - self.desktop.x), (event.y - self.desktop.y)
             x_coords, y_coords = self.desktop.coords(self.selected_base)
             #print(self.desktop.coords(self.selected_img))
@@ -912,14 +946,16 @@ class Desktop_screen:
 
     # function to handle the release event
     def on_image_release(self, event, base, img, txt):
+        self.icon_movement = False
+        self.icon_focused = False
         self.desktop.configure(cursor="")
         pady = 1.19
-        y_offset = 32
+        y_offset = 76
         padx = 76
         x_offset = 38
-        click_offset = 13 # fixes the bug when clicking the icon on the left moves it 1 icon over
-        x = int(((event.x + self.icon_numsize // 2 - x_offset-click_offset) // padx) * padx + x_offset)
-        y = int((int(event.y / (self.icon_numsize / pady)) * (self.icon_numsize / pady)) + y_offset)
+        x, y = self.desktop.coords(base)
+        x = int(((x + self.icon_numsize // 2 - x_offset) // padx) * padx + x_offset)
+        y = int((int(y / (self.icon_numsize / pady)) * (self.icon_numsize / pady)) + y_offset/2)
 
 
         if self.grid == False:
@@ -945,7 +981,19 @@ class Desktop_screen:
         if self.grid == True:
             self.grid=False
         else:
+            for i in self.icon_dict:
+                icon_x, icon_y = self.icon_dict[i]
+
+                pady = 1.19
+                y_offset = 38
+                padx = 76
+                x_offset = 38
+                x = int(((icon_x + self.icon_numsize // 2 - x_offset) // padx) * padx + x_offset)
+                y = int((int(icon_y / (self.icon_numsize / pady)) * (self.icon_numsize / pady)) + y_offset)
+                self.icon_dict[i] = x, y
             self.grid=True
+        self.file_dump()
+        self.place_icons()
 
 if __name__ == "__main__":
     variables = Variables()
