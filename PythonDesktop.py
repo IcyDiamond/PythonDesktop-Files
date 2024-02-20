@@ -15,7 +15,7 @@ import sys
 import os
 
 
-update_version = "1.1.6"
+update_version = "1.1.7"
 #threadlist = []
 #threadlist.append(Thread(target=lambda: os.system('explorer.exe &')))
 #threadlist.append(Thread(target=lambda: os.kill(os.getpid(), signal.SIGTERM)))
@@ -360,6 +360,7 @@ class Desktop_screen:
         self.icons = []
         self.icon_ref = []
         self.icon_dict = {}
+        self.icon_base_text_size = {}
         self.view_icons_value = True
         self.grid=True
         self.new_folder_copy = 0
@@ -368,10 +369,12 @@ class Desktop_screen:
         self.show_start_menu = True
         self.side_bar_initialized = False
         self.side_bar_active = False
+        self.icon_left = False
         self.start_menu = None
         self.image = None
         self.x = None
         self.y = None
+        self.current_icon_hover = None
         self.icon_id = 0
         self.monitor_height = variables.monitor_height
         self.monitor_width = variables.monitor_width
@@ -379,6 +382,12 @@ class Desktop_screen:
         self.icon_numsize = 100
         self.height = 54
         self.add = 0
+
+        #numbers for default rounding to grid
+        self.pady = 1.19
+        self.y_offset = 38
+        self.padx = 76
+        self.x_offset = 38
 
     def initialize_taskbar(self):
         self.new_window = tk.Toplevel(self.master)
@@ -404,19 +413,42 @@ class Desktop_screen:
         self.folders_small = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Folder_Small.png")))
         self.folders_medium = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Folder_Medium.png")))
         self.folders_large = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Folder_Large.png")))
+
         self.none_selection_small = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Empty_Icon_Selection.png")).resize((76,54)))
         self.none_selection_medium = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Empty_Icon_Selection.png")).resize((76,70)))
         self.none_selection_large = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Empty_Icon_Selection.png")).resize((106,118)))
+
         self.hover_selection_small = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Hover_Icon_Selection.png")).resize((76,54)))
+        self.hover_selection_small_wtext = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Hover_Icon_Selection.png")).resize((76,69)))
         self.hover_selection_medium = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Hover_Icon_Selection.png")).resize((76,70)))
+        self.hover_selection_medium_wtext = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Hover_Icon_Selection.png")).resize((76,85)))
         self.hover_selection_large = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Hover_Icon_Selection.png")).resize((106,118)))
+
         self.clicked_selection_small = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Clicked_Icon_Selection.png")).resize((76,54)))
+        self.clicked_selection_small_wtext = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Clicked_Icon_Selection.png")).resize((76,69)))
         self.clicked_selection_medium = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Clicked_Icon_Selection.png")).resize((76,70)))
+        self.clicked_selection_medium_wtext = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Clicked_Icon_Selection.png")).resize((76,85)))
         self.clicked_selection_large = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Clicked_Icon_Selection.png")).resize((106,118)))
+
+        self.hover_clicked_selection_small = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Hover_Clicked_Icon_Selection.png")).resize((76,54)))
+        self.hover_clicked_selection_small_wtext = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Hover_Clicked_Icon_Selection.png")).resize((76,69)))
+        self.hover_clicked_selection_medium = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Hover_Clicked_Icon_Selection.png")).resize((76,70)))
+        self.hover_clicked_selection_medium_wtext = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Hover_Clicked_Icon_Selection.png")).resize((76,85)))
+        self.hover_clicked_selection_large = ImageTk.PhotoImage(Image.open(os.path.join(variables.assets, "Hover_Clicked_Icon_Selection.png")).resize((106,118)))
+
+
+
+        #default
         self.clicked_selection = self.clicked_selection_small
         self.hover_selection = self.hover_selection_small
         self.none_selection = self.none_selection_small
         self.folders = self.folders_small
+        self.hover_selection_wtext = self.hover_selection_small_wtext
+        self.clicked_selection_wtext = self.clicked_selection_small_wtext
+        self.hover_clicked_selection = self.hover_clicked_selection_small
+        self.hover_clicked_selection_wtext = self.hover_clicked_selection_small_wtext
+        self.y_text_offset = 7
+
         self.desktop = tk.Canvas(self.master.desktop_frame, bg="black", highlightthickness=0)
         self.desktop.pack(side=LEFT,fill=BOTH, expand=True)
         self.desktop.create_image(0, 0, image = self.wallpaper, anchor = NW)
@@ -425,6 +457,7 @@ class Desktop_screen:
         #icons
         self.icon_size_var_set = 'small'
         self.selected_base = None
+        self.selected_text = None
         self.icon_movement = False
         self.icon_focused = False
 
@@ -436,6 +469,7 @@ class Desktop_screen:
         self.desktop.bind('<ButtonPress-1>', self.on_press)
         self.desktop.bind('<B1-Motion>', self.on_drag)
         self.desktop.bind('<ButtonRelease-1>', self.on_release)
+        self.desktop.bind("<Double-1>", lambda x: print("test"))
         
         self.place_icons()
         
@@ -533,7 +567,17 @@ class Desktop_screen:
         for base, __ in self.icon_dict.items():
             self.desktop.itemconfig(base+"base", image=self.none_selection)
         if self.icon_focused == False:
-            self.desktop.itemconfig(self.selected_base, image=self.clicked_selection)
+            self.desktop.itemconfig(self.selected_base, image=self.none_selection)
+        else:
+            for i in self.desktop.gettags(self.selected_text):
+                try:
+                    if int(i) <= 16:
+                        self.desktop.itemconfig(self.selected_base, image=self.clicked_selection)
+                    else:
+                        self.desktop.itemconfig(self.selected_base, image=self.clicked_selection_wtext)
+                except ValueError:
+            #        #because it gives tag Current which cant be a int
+                    pass
         self.rect = self.desktop.create_rectangle(
             self.start_x, self.start_y, self.start_x, self.start_y,
             outline='blue', fill='blue', stipple='gray25'
@@ -550,7 +594,11 @@ class Desktop_screen:
                         icon_x = values_list[0]
                         icon_y = values_list[1]
                         if ((icon_x < self.start_x and icon_x > event.x_root) or (icon_x > self.start_x and icon_x < event.x_root)) and ((icon_y < self.start_y and icon_y > event.y_root) or (icon_y > self.start_y and icon_y < event.y_root)):
-                            self.desktop.itemconfig(base+"base", image=self.clicked_selection)
+                            text, height, icon_x, icon_y = self.icon_base_text_size[base+"base"]
+                            if not height <= 16:
+                                self.desktop.itemconfig(base+"base", image=self.clicked_selection_wtext)
+                            else:
+                                self.desktop.itemconfig(base+"base", image=self.clicked_selection)
                             break
                         else:
                             self.desktop.itemconfig(base+"base", image=self.none_selection)
@@ -590,50 +638,12 @@ class Desktop_screen:
             self.new_folder_copy += 1
             self.new_folder()
             return
-
+        
         os.makedirs(f"{variables.users}\\{Auth.username}\\desktop\\{files}")
 
-        if self.view_icons_value == False:
-            view = tk.HIDDEN
-        else:
-            view = tk.NORMAL
+        file_path = f"{variables.users}\\{Auth.username}\\desktop\\{files}"
 
-        self.desktop_icon_base = self.desktop.create_image(icon_x, icon_y, image=self.none_selection, tags=files.replace(' ', '/'))
-        self.image = self.desktop.create_image(icon_x, icon_y-8, image=self.folders, tags=files.replace(' ', '/'))
-    #    else:
-    #        self.image = self.desktop.create_image(icon_x, icon_y, image=self.icon_photo, tags=files.replace(' ', '/'))
-        text = self.shorten_text(files, icon_x, icon_y)
-#
-#
-        self.icon_id += 1           
-        
-        self.desktop.itemconfig(self.desktop_icon_base, state=view)
-        self.desktop.itemconfig(self.image, state=view)
-        self.desktop.itemconfig(text, state=view)
-#
-        self.icon_ref.append(self.icon_photo)
-        self.icon_ref.append(self.folders)
-        self.icon_ref.append(self.desktop_icon_base)
-        self.icon_ref.append(self.image)
-        self.icon_ref.append(text)
-    #    
-        self.desktop.tag_bind(self.desktop_icon_base, "<Button-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_press(event, base, img, txt))
-        self.desktop.tag_bind(self.image, "<Button-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_press(event, base, img, txt))
-        self.desktop.tag_bind(text, "<Button-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_press(event, base, img, txt))
-    #    self.desktop.tag_bind(self.image, "<Button-3>", self.icon_popup)
-        self.desktop.tag_bind(self.desktop_icon_base, "<Enter>", lambda event, img=self.desktop_icon_base: self.on_icon_hover(event, img))
-        self.desktop.tag_bind(self.desktop_icon_base, "<Leave>", lambda event, img=self.desktop_icon_base: self.on_icon_leave(event, img))
-        self.desktop.tag_bind(self.image, "<Enter>", lambda event, img=self.desktop_icon_base: self.on_icon_hover(event, img))
-        self.desktop.tag_bind(self.image, "<Leave>", lambda event, img=self.desktop_icon_base: self.on_icon_leave(event, img))
-        self.desktop.tag_bind(text, "<Enter>", lambda event, img=self.desktop_icon_base: self.on_icon_hover(event, img))
-        self.desktop.tag_bind(text, "<Leave>", lambda event, img=self.desktop_icon_base: self.on_icon_leave(event, img))
-        self.desktop.tag_bind(self.desktop_icon_base, "<B1-Motion>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_move(event, base, img, txt))
-        self.desktop.tag_bind(self.image, "<B1-Motion>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_move(event, base, img, txt))
-        self.desktop.tag_bind(text, "<B1-Motion>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_move(event, base, img, txt))
-        self.desktop.tag_bind(self.desktop_icon_base, "<ButtonRelease-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_release(event, base, img, txt))
-        self.desktop.tag_bind(self.image, "<ButtonRelease-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_release(event, base, img, txt))
-        self.desktop.tag_bind(text, "<ButtonRelease-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_release(event, base, img, txt))
-        self.desktop.tag_bind(text, "<Double-1>", lambda event, txt=text, file=files: self.on_img_rename(event, txt, file))
+        self.create_icons(file_path, files, icon_x, icon_y)
 
     #sub menus
     def do_popup(self, event):
@@ -662,6 +672,14 @@ class Desktop_screen:
             self.hover_selection = self.hover_selection_large
             self.clicked_selection = self.clicked_selection_large
 
+            self.pady = .82 #all broken
+            self.y_offset = 65 #all broken
+            self.padx = 106 #all broken
+            self.x_offset = 56 
+
+            self.y_text_offset = 32
+            self.max_text_width = 98
+
             
             if self.icon_size_var_set == 'large':
                 pass
@@ -674,8 +692,8 @@ class Desktop_screen:
             if self.icon_size_var_set == 'small':
                 for i in self.icon_dict:
                     icon_x, icon_y = self.icon_dict[i]
-                    icon_x = round(icon_x * 1.96)
-                    icon_y = round(icon_y * 1.96)
+                    icon_x = round(icon_x * 1.4)
+                    icon_y = round(icon_y * 1.4)
                     self.icon_dict[i] = (icon_x, icon_y)
                 
         if size == "medium":
@@ -684,6 +702,16 @@ class Desktop_screen:
             self.none_selection = self.none_selection_medium
             self.hover_selection = self.hover_selection_medium
             self.clicked_selection = self.clicked_selection_medium
+            self.hover_selection_wtext = self.hover_selection_medium_wtext
+            self.clicked_selection_wtext = self.clicked_selection_medium_wtext
+
+            self.pady = .99 #Still not perfect
+            self.y_offset = 76
+            self.padx = 76
+            self.x_offset = 38
+
+            self.y_text_offset = 14
+            self.max_text_width = 68
 
             if self.icon_size_var_set == 'large':
                 for i in self.icon_dict:
@@ -696,8 +724,8 @@ class Desktop_screen:
             if self.icon_size_var_set == 'small':
                 for i in self.icon_dict:
                     icon_x, icon_y = self.icon_dict[i]
-                    icon_x = round(icon_x * 1.4)
-                    icon_y = round(icon_y * 1.4)
+                    #icon_x = round(icon_x * 1.4)
+                    icon_y = round(icon_y * 1.2)
                     self.icon_dict[i] = (icon_x, icon_y)
         if size == "small":
             self.icon_photo = NONE
@@ -705,18 +733,28 @@ class Desktop_screen:
             self.none_selection = self.none_selection_small
             self.hover_selection = self.hover_selection_small
             self.clicked_selection = self.clicked_selection_small
+            self.hover_selection_wtext = self.hover_selection_small_wtext
+            self.clicked_selection_wtext = self.clicked_selection_small_wtext
+
+            self.pady = 1.19
+            self.y_offset = 38
+            self.padx = 76
+            self.x_offset = 38
+
+            self.y_text_offset = 7
+            self.max_text_width = 68
 
             if self.icon_size_var_set == 'large':
                 for i in self.icon_dict:
                     icon_x, icon_y = self.icon_dict[i]
-                    icon_x = round(icon_x / 1.96)
-                    icon_y = round(icon_y / 1.96)
+                    icon_x = round(icon_x / 1.4)
+                    icon_y = round(icon_y / 1.4)
                     self.icon_dict[i] = (icon_x, icon_y)
             if self.icon_size_var_set == 'medium':
                 for i in self.icon_dict:
                     icon_x, icon_y = self.icon_dict[i]
-                    icon_x = round(icon_x / 1.4)
-                    icon_y = round(icon_y / 1.4)
+                    #icon_x = round(icon_x / 1.4)
+                    icon_y = round(icon_y / 1.2)
                     self.icon_dict[i] = (icon_x, icon_y)
             if self.icon_size_var_set == 'small':
                 pass
@@ -748,7 +786,7 @@ class Desktop_screen:
         
         for word in files.split():
             text_line = current_line + " " + word if current_line else word
-            text = self.desktop.create_text(icon_x-32, icon_y+8, text=text_line, font=("Arial", 10), anchor="n")
+            text = self.desktop.create_text(icon_x-32, icon_y, text=text_line, font=("Arial", 10), anchor="n")
             bounds = self.desktop.bbox(text)
             text_width = bounds[2] - bounds[0]
             text_height = bounds[3] - bounds[1]
@@ -756,7 +794,7 @@ class Desktop_screen:
             
             if text_width <= self.max_text_width:
                 current_line = text_line
-            else:
+            else: 
                 if current_line:
                     lines.append((current_line, text_height))
                 current_line = word
@@ -778,7 +816,7 @@ class Desktop_screen:
         truncated_lines = []
         total_height = 0
         for line, height in lines:
-            text = self.desktop.create_text(icon_x-32, icon_y+8, text=line, font=("Arial", 10), anchor="n")
+            text = self.desktop.create_text(icon_x-32, icon_y, text=line, font=("Arial", 10), anchor="n")
             bounds = self.desktop.bbox(text)
             text_width = bounds[2] - bounds[0]
             self.desktop.delete(text)
@@ -793,9 +831,9 @@ class Desktop_screen:
         
         # Create the text item on the Canvas
         truncated_text = "\n".join(truncated_lines)
-        text = self.desktop.create_text(icon_x-32, icon_y+8, text=truncated_text, font=("Arial", 10), anchor="nw", fill='#ffffff')
+        text = self.desktop.create_text(icon_x-32, icon_y, text=truncated_text, font=("Arial", 10), anchor="nw", fill='#ffffff', tags=total_height)
         
-        return text
+        return text, total_height
 
     def place_icons(self):
         variables.refresh_var()
@@ -828,49 +866,7 @@ class Desktop_screen:
                 #        icon_x += self.icon_numsize
                 #self.icon_dict[files.replace(' ', '/')] = (icon_x, icon_y)
             
-            if self.view_icons_value == False:
-                view = tk.HIDDEN
-            else:
-                view = tk.NORMAL
-
-            
-            if os.path.isdir(file_path):
-                self.desktop_icon_base = self.desktop.create_image(icon_x, icon_y, image=self.none_selection, tags=files.replace(' ', '/')+"base")
-                self.image = self.desktop.create_image(icon_x, icon_y-8, image=self.folders, tags=files.replace(' ', '/'))
-        #    else:
-        #        self.image = self.desktop.create_image(icon_x, icon_y, image=self.icon_photo, tags=files.replace(' ', '/'))
-            text = self.shorten_text(files, icon_x, icon_y)
-#
-#
-            self.icon_id += 1           
-            
-            self.desktop.itemconfig(self.desktop_icon_base, state=view)
-            self.desktop.itemconfig(self.image, state=view)
-            self.desktop.itemconfig(text, state=view)
-#
-            self.icon_ref.append(self.desktop_icon_base)
-            self.icon_ref.append(self.icon_photo)
-            self.icon_ref.append(self.folders)
-            self.icon_ref.append(self.image)
-            self.icon_ref.append(text)
-        #    
-            self.desktop.tag_bind(self.desktop_icon_base, "<ButtonRelease-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_release(event, base, img, txt))
-            self.desktop.tag_bind(self.desktop_icon_base, "<B1-Motion>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_move(event, base, img, txt))
-            self.desktop.tag_bind(self.desktop_icon_base, "<Button-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_press(event, base, img, txt))
-            self.desktop.tag_bind(self.desktop_icon_base, "<Enter>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_hover(event, base, img, txt))
-            self.desktop.tag_bind(self.desktop_icon_base, "<Leave>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_leave(event, base, img, txt))
-            self.desktop.tag_bind(self.image, "<ButtonRelease-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_release(event, base, img, txt))
-            self.desktop.tag_bind(self.image, "<B1-Motion>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_move(event, base, img, txt))
-            self.desktop.tag_bind(self.image, "<Button-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_press(event, base, img, txt))
-            self.desktop.tag_bind(self.image, "<Enter>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_hover(event, base, img, txt))
-            self.desktop.tag_bind(self.image, "<Leave>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_leave(event, base, img, txt))
-            #self.desktop.tag_bind(self.image, "<Button-3>", self.icon_popup)
-            self.desktop.tag_bind(text, "<ButtonRelease-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_release(event, base, img, txt))
-            self.desktop.tag_bind(text, "<B1-Motion>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_move(event, base, img, txt))
-            self.desktop.tag_bind(text, "<Button-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_press(event, base, img, txt))
-            self.desktop.tag_bind(text, "<Double-1>", lambda event, txt=text, file=files: self.on_img_rename(event, txt, file))
-            self.desktop.tag_bind(text, "<Enter>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_hover(event, base, img, txt))
-            self.desktop.tag_bind(text, "<Leave>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_leave(event, base, img, txt))
+            self.create_icons(file_path, files, icon_x, icon_y)
 
             #find the next available spot 
             if icon_y > self.monitor_height-40-70: #Taskbar height #used to find spot if no location 
@@ -880,24 +876,104 @@ class Desktop_screen:
 
         self.icon_id = 0
 
+    def create_icons(self, file_path, files, icon_x, icon_y):
+        if self.view_icons_value == False:
+            view = tk.HIDDEN
+        else:
+            view = tk.NORMAL
+
+        text, height = self.shorten_text(files, icon_x, icon_y+self.y_text_offset)
+        
+        if os.path.isdir(file_path):
+            if not height <= 16:
+                self.desktop_icon_base = self.desktop.create_image(icon_x, icon_y+7, image=self.none_selection, tags=files.replace(' ', '/')+"base")
+            else:
+                self.desktop_icon_base = self.desktop.create_image(icon_x, icon_y, image=self.none_selection, tags=files.replace(' ', '/')+"base")
+            self.image = self.desktop.create_image(icon_x, icon_y-8, image=self.folders, tags=files.replace(' ', '/'))
+    #    else:
+    #        self.image = self.desktop.create_image(icon_x, icon_y, image=self.icon_photo, tags=files.replace(' ', '/'))
+
+        self.icon_base_text_size[files.replace(' ', '/')+"base"] = text, height, icon_x, icon_y+self.y_text_offset
+
+        self.icon_id += 1           
+        
+        self.desktop.itemconfig(self.desktop_icon_base, state=view)
+        self.desktop.itemconfig(self.image, state=view)
+        self.desktop.itemconfig(text, state=view)
+#
+        self.icon_ref.append(self.desktop_icon_base)
+        self.icon_ref.append(self.icon_photo)
+        self.icon_ref.append(self.folders)
+        self.icon_ref.append(self.image)
+        self.icon_ref.append(text)
+    #    
+        self.desktop.tag_bind(self.desktop_icon_base, "<ButtonRelease-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_release(event, base, img, txt))
+        self.desktop.tag_bind(self.desktop_icon_base, "<B1-Motion>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_move(event, base, img, txt))
+        self.desktop.tag_bind(self.desktop_icon_base, "<Button-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_press(event, base, img, txt))
+        self.desktop.tag_bind(self.desktop_icon_base, "<Enter>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_hover(event, base, img, txt))
+        self.desktop.tag_bind(self.desktop_icon_base, "<Leave>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_leave(event, base, img, txt))
+        self.desktop.tag_bind(self.desktop_icon_base, "<Key>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_delete(event, base, img, txt))
+        self.desktop.tag_bind(self.image, "<ButtonRelease-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_release(event, base, img, txt))
+        self.desktop.tag_bind(self.image, "<B1-Motion>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_move(event, base, img, txt))
+        self.desktop.tag_bind(self.image, "<Button-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_press(event, base, img, txt))
+        self.desktop.tag_bind(self.image, "<Enter>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_hover(event, base, img, txt))
+        self.desktop.tag_bind(self.image, "<Leave>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_leave(event, base, img, txt))
+        #self.desktop.tag_bind(self.image, "<BackSpace>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_delete(event, base, img, txt))
+        #self.desktop.tag_bind(self.image, "<Button-3>", self.icon_popup)
+        self.desktop.tag_bind(text, "<ButtonRelease-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_release(event, base, img, txt))
+        self.desktop.tag_bind(text, "<B1-Motion>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_move(event, base, img, txt))
+        self.desktop.tag_bind(text, "<Button-1>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_image_press(event, base, img, txt))
+        self.desktop.tag_bind(text, "<Double-1>", lambda event, txt=text, file=files: self.on_img_rename(event, txt, file))
+        self.desktop.tag_bind(text, "<Enter>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_hover(event, base, img, txt))
+        self.desktop.tag_bind(text, "<Leave>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_leave(event, base, img, txt))
+        #self.desktop.tag_bind(text, "<BackSpace>", lambda event, base=self.desktop_icon_base, img=self.image, txt=text: self.on_icon_delete(event, base, img, txt))
+
     def on_icon_hover(self, event, base, img, txt):
         if self.selected_base == base:
             pass
         else:
-            self.desktop.itemconfig(base, image=self.hover_selection)
+            if not self.icon_left:
+                for i in self.desktop.gettags(txt):
+                    try:
+                        if int(i) <= 16:
+                            current_image = self.desktop.itemcget(base, 'image')
+                            if str(current_image) == str(self.clicked_selection):
+                                self.desktop.itemconfig(base, image=self.hover_clicked_selection)
+                            else:
+                                self.desktop.itemconfig(base, image=self.hover_selection)
+                        else:
+                            current_image = self.desktop.itemcget(base, 'image')
+                            if str(current_image) == str(self.clicked_selection_wtext):
+                                self.desktop.itemconfig(base, image=self.hover_clicked_selection_wtext)
+                            else:
+                                self.desktop.itemconfig(base, image=self.hover_selection_wtext)
+
+                    except ValueError:
+                        #because it gives tag Current which cant be a int
+                        pass
+        self.current_icon_hover = base
 
     def on_icon_leave(self, event, base, img, txt):
+        self.icon_left = True
         if self.selected_base == base:
             pass
         else:
-            self.desktop.itemconfig(base, image=self.none_selection)
+            current_image = self.desktop.itemcget(base, 'image')
+            if str(current_image) == str(self.hover_clicked_selection):
+                self.desktop.itemconfig(base, image=self.clicked_selection)
+            elif str(current_image) == str(self.hover_clicked_selection_wtext):
+                self.desktop.itemconfig(base, image=self.clicked_selection_wtext)
+            else:
+                self.desktop.itemconfig(base, image=self.none_selection)
+        self.icon_left = False
 
     def on_image_press(self, event, base, img, txt):
         self.icon_focused = True
         if not self.selected_base == base:
             self.desktop.itemconfig(self.selected_base, image=self.none_selection)
         self.selected_base = base
-        self.desktop.itemconfig(base, image=self.clicked_selection)
+        self.selected_text = txt
+        #self.desktop.itemconfig(base, image=self.clicked_selection)
         self.desktop.configure(cursor="fleur")
         self.desktop.x = event.x
         self.desktop.y = event.y
@@ -908,6 +984,10 @@ class Desktop_screen:
         self.rename_text_box = tk.Entry(window)
         self.rename_text_box.bind('<Return>', lambda event, txt=text, file=file_name: self.update_icon_name(event, txt, file))
         self.desktop.create_window(event.x, event.y, window=self.rename_text_box, tag='entry')
+
+    def on_icon_delete(self, event, base, img, txt):
+        print("removed")
+        #os.remove(f"{variables.users}\\{Auth.username}\\desktop\\{base}")
 
     def update_icon_name(self, event, text, file_name):
         self.desktop.delete('entry')
@@ -924,7 +1004,6 @@ class Desktop_screen:
             self.icon_movement = True
             x, y = (event.x - self.desktop.x), (event.y - self.desktop.y)
             x_coords, y_coords = self.desktop.coords(self.selected_base)
-            #print(self.desktop.coords(self.selected_img))
             if event.x > self.monitor_width:
                 self.desktop.move(self.selected_base, 0, y)
                 self.desktop.move(img, 0, y)
@@ -946,26 +1025,33 @@ class Desktop_screen:
 
     # function to handle the release event
     def on_image_release(self, event, base, img, txt):
+        os.system("cls")
         self.icon_movement = False
         self.icon_focused = False
         self.desktop.configure(cursor="")
-        pady = 1.19
-        y_offset = 76
-        padx = 76
-        x_offset = 38
-        x, y = self.desktop.coords(base)
-        x = int(((x + self.icon_numsize // 2 - x_offset) // padx) * padx + x_offset)
-        y = int((int(y / (self.icon_numsize / pady)) * (self.icon_numsize / pady)) + y_offset/2)
+        icon_x, icon_y = self.desktop.coords(base)
+        print(icon_y)
 
+        x, y = self.round_grid(icon_x, icon_y)
+        print(y)
 
         if self.grid == False:
             x, y = self.desktop.coords(base)
             x, y = self.desktop.coords(img)
             x, y = round(x), round(y)
         else:
-            self.desktop.coords(base, x, y)
+            for i in self.desktop.gettags(txt):
+                try:
+                    if int(i) <= 16:
+                        z =  0
+                    else:
+                        z = 7
+                except ValueError:
+                    #because it gives tag Current which cant be a int
+                    pass
+            self.desktop.coords(base, x, y+z)
             self.desktop.coords(img, x, y-8)
-            self.desktop.coords(txt, x-32, y+8)
+            self.desktop.coords(txt, x-32, y+self.y_text_offset)
 
         # update location of the image in the dictionary
         image_id = self.desktop.gettags(img)[0]
@@ -984,16 +1070,17 @@ class Desktop_screen:
             for i in self.icon_dict:
                 icon_x, icon_y = self.icon_dict[i]
 
-                pady = 1.19
-                y_offset = 38
-                padx = 76
-                x_offset = 38
-                x = int(((icon_x + self.icon_numsize // 2 - x_offset) // padx) * padx + x_offset)
-                y = int((int(icon_y / (self.icon_numsize / pady)) * (self.icon_numsize / pady)) + y_offset)
+                x, y = self.round_grid(icon_x, icon_y)
+
                 self.icon_dict[i] = x, y
             self.grid=True
         self.file_dump()
         self.place_icons()
+
+    def round_grid(self, icon_x, icon_y):
+        x = int(((icon_x + self.icon_numsize // 2 - self.x_offset) // self.padx) * self.padx + self.x_offset)
+        y = int((int(icon_y / (self.icon_numsize / self.pady)) * (self.icon_numsize / self.pady)) + self.y_offset)
+        return x, y
 
 if __name__ == "__main__":
     variables = Variables()
